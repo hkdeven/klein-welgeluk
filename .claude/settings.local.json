@@ -7,7 +7,16 @@
       "Bash(npm run *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(mkdir -p /Users/devenblackburn/Downloads/src/app/api/auth /Users/devenblackburn/Downloads/src/app/api/pages /Users/devenblackburn/Downloads/src/app/api/documents /Users/devenblackburn/Downloads/src/app/api/calendar /Users/devenblackburn/Downloads/src/app/api/comments /Users/devenblackburn/Downloads/src/app/api/users /Users/devenblackburn/Downloads/src/app/login /Users/devenblackburn/Downloads/src/app/documents /Users/devenblackburn/Downloads/src/app/calendar /Users/devenblackburn/Downloads/src/app/profile /Users/devenblackburn/Downloads/src/components /Users/devenblackburn/Downloads/src/hooks /Users/devenblackburn/Downloads/src/lib)",
+      "Bash(cp /Users/devenblackburn/Downloads/klein-welgeluk/src/app/globals.css /Users/devenblackburn/Downloads/src/app/globals.css)",
+      "Bash(cp -r /Users/devenblackburn/Downloads/klein-welgeluk/src/app /Users/devenblackburn/Downloads/src/)",
+      "Bash(cp -r /Users/devenblackburn/Downloads/klein-welgeluk/src/components /Users/devenblackburn/Downloads/src/)",
+      "Bash(cp -r /Users/devenblackburn/Downloads/klein-welgeluk/src/hooks /Users/devenblackburn/Downloads/src/)",
+      "Bash(cp -r /Users/devenblackburn/Downloads/klein-welgeluk/src/lib /Users/devenblackburn/Downloads/src/)",
+      "Bash(mkdir -p \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/\\\\[...slug\\\\]\")",
+      "Bash(cp /Users/devenblackburn/Downloads/klein-welgeluk/src/app/\\\\[...slug\\\\]/page.tsx \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/[...slug]/page.tsx\")",
+      "Bash(rm -rf \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/[...slug]\")"
     ]
   }
 }

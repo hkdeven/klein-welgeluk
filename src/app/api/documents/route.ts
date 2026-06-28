@@ -122,9 +122,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newDocument, { status: 201 });
   } catch (error) {
-    console.error("Document upload error:", error);
+    const msg = (error as Error).message;
+    console.error("Document upload error:", msg);
     return NextResponse.json(
-      { error: "Failed to upload document" },
+      { error: `Upload error: ${msg}` },
       { status: 500 }
     );
   }

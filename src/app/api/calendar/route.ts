@@ -83,6 +83,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!created_by) {
+      return NextResponse.json(
+        { error: "created_by user ID is required" },
+        { status: 400 }
+      );
+    }
+
     const { data: newEvent, error } = await supabase
       .from("calendar_events")
       .insert([
@@ -100,13 +107,19 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: `Database error: ${error.message}` },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
     console.error("Calendar create error:", error);
     return NextResponse.json(
-      { error: "Failed to create event" },
+      { error: `Server error: ${(error as Error).message}` },
       { status: 500 }
     );
   }

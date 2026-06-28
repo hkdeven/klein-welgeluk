@@ -20,34 +20,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page_id = searchParams.get("page_id");
 
-    if (!page_id) {
-      return NextResponse.json(
-        { error: "page_id is required" },
-        { status: 400 }
-      );
+    let query = supabase.from("photos").select("*");
+
+    if (page_id) {
+      query = query.eq("page_id", page_id);
     }
 
-    const { data: comments, error } = await supabase
-      .from("comments")
-      .select(
-        `
-        *,
-        author:author_id(id, display_name, short_name, avatar_url, role)
-      `
-      )
-      .eq("page_id", page_id)
-      .order("created_at", { ascending: true });
+    const { data: photos, error } = await query;
 
     if (error) throw error;
 
     return NextResponse.json({
-      comments: comments || [],
-      total: comments?.length || 0,
+      photos: photos || [],
+      total: photos?.length || 0,
     });
   } catch (error) {
-    console.error("Comments fetch error:", error);
+    console.error("Photos fetch error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch comments" },
+      { error: "Failed to fetch photos" },
       { status: 500 }
     );
   }
@@ -62,42 +52,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { page_id, body, author_id, parent_comment_id } =
+    const { page_id, external_url, storage_path, caption, category, uploaded_by } =
       await request.json();
 
-    if (!page_id || !body || !author_id) {
+    if (!page_id || (!external_url && !storage_path)) {
       return NextResponse.json(
-        { error: "page_id, body, and author_id are required" },
+        { error: "page_id and either external_url or storage_path are required" },
         { status: 400 }
       );
     }
 
-    const { data: newComment, error } = await supabase
-      .from("comments")
+    if (!uploaded_by) {
+      return NextResponse.json(
+        { error: "uploaded_by user ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { data: newPhoto, error } = await supabase
+      .from("photos")
       .insert([
         {
           page_id,
-          body,
-          author_id,
-          parent_comment_id: parent_comment_id || null,
+          external_url: external_url || null,
+          storage_path: storage_path || null,
+          caption: caption || "",
+          category: category || "inspiration",
+          uploaded_by,
         },
       ])
-      .select(
-        `
-        *,
-        author:author_id(id, display_name, short_name, avatar_url, role)
-      `
-      )
+      .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: `Database error: ${error.message}` },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(newComment, { status: 201 });
+    return NextResponse.json(newPhoto, { status: 201 });
   } catch (error) {
     const msg = (error as Error).message;
-    console.error("Comment create error:", msg);
+    console.error("Photo create error:", msg);
     return NextResponse.json(
-      { error: `Comment error: ${msg}` },
+      { error: `Photo error: ${msg}` },
       { status: 500 }
     );
   }

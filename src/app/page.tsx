@@ -6,7 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import { usePages } from "@/hooks/usePages";
 
 const mockUser = {
-  id: "1",
+  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
   display_name: "Deven Blackburn",
   short_name: "Deven",
   role: "owner",
@@ -17,6 +17,12 @@ export default function HomePage() {
   const { pages, loading } = usePages();
   const [editMode, setEditMode] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState("");
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [photoCaption, setPhotoCaption] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [pageId, setPageId] = useState<string | null>(null);
 
   const carouselImages = [
     "https://via.placeholder.com/1180x400?text=Klein+Welgeluk",
@@ -30,6 +36,90 @@ export default function HomePage() {
 
   const nextSlide = () => {
     setCarouselIndex((prev) => (prev + 1) % carouselImages.length);
+  };
+
+  useEffect(() => {
+    if (!pages.length) return;
+
+    // Use first page ID for comments/photos
+    const firstPageId = pages[0]?.id;
+    if (!firstPageId) return;
+
+    setPageId(firstPageId);
+
+    // Fetch comments
+    const fetchComments = async () => {
+      try {
+        const res = await fetch(`/api/comments?page_id=${firstPageId}`);
+        const data = await res.json();
+        setComments(data.comments || []);
+      } catch (error) {
+        console.error("Failed to fetch comments:", error);
+      }
+    };
+
+    // Fetch photos
+    const fetchPhotos = async () => {
+      try {
+        const res = await fetch(`/api/photos?page_id=${firstPageId}`);
+        const data = await res.json();
+        setPhotos(data.photos || []);
+      } catch (error) {
+        console.error("Failed to fetch photos:", error);
+      }
+    };
+
+    fetchComments();
+    fetchPhotos();
+  }, [pages]);
+
+  const handleAddComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComment.trim() || !pageId) return;
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page_id: pageId,
+          body: newComment,
+          author_id: mockUser.id,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add comment");
+      const comment = await res.json();
+      setComments([...comments, comment]);
+      setNewComment("");
+      alert("Comment added!");
+    } catch (error) {
+      alert("Error: " + (error as Error).message);
+    }
+  };
+
+  const handleAddPhoto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoUrl.trim() || !pageId) return;
+    try {
+      const res = await fetch("/api/photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          page_id: pageId,
+          external_url: photoUrl,
+          caption: photoCaption,
+          category: "inspiration",
+          uploaded_by: mockUser.id,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add photo");
+      const photo = await res.json();
+      setPhotos([...photos, photo]);
+      setPhotoUrl("");
+      setPhotoCaption("");
+      alert("Photo added!");
+    } catch (error) {
+      alert("Error: " + (error as Error).message);
+    }
   };
 
   // Flatten pages for display
@@ -169,19 +259,78 @@ export default function HomePage() {
             )}
           </div>
 
-          {/* Recent activity */}
+          {/* Comments */}
           <div className="mb-8">
             <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
-              Recent activity
+              Comments
               <span className="flex-1 h-px bg-[#E5E1D3]"></span>
             </h2>
-            <div className="bg-white border border-[#ECE8DC] rounded p-5">
-              <ul className="list-none p-0 m-0">
-                <li className="border-b border-dashed border-[#ECE8DC] py-2 text-[13px] text-pine">
-                  No recent activity yet
-                </li>
-              </ul>
+            <div className="bg-white border border-[#ECE8DC] rounded p-5 mb-4">
+              {comments.length > 0 ? (
+                <div className="space-y-4">
+                  {comments.map((c: any) => (
+                    <div key={c.id} className="flex gap-3">
+                      <div className="w-8 h-8 rounded-full bg-bottle text-white text-xs flex items-center justify-center flex-shrink-0">
+                        {c.author?.short_name?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-[12px] font-semibold text-bottle">
+                          {c.author?.short_name}
+                        </div>
+                        <div className="text-[13px] text-pine mt-1">{c.body}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sage text-[13px]">No comments yet</p>
+              )}
             </div>
+            <form onSubmit={handleAddComment} className="flex gap-2">
+              <input
+                type="text"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="flex-1 border border-[#D7DECF] rounded p-2 text-[13px]"
+              />
+              <button
+                type="submit"
+                className="bg-bottle text-white px-4 py-2 rounded text-[13px] font-medium hover:opacity-90"
+              >
+                Post
+              </button>
+            </form>
+          </div>
+
+          {/* Add Photo */}
+          <div className="mb-8">
+            <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
+              Add Photo
+              <span className="flex-1 h-px bg-[#E5E1D3]"></span>
+            </h2>
+            <form onSubmit={handleAddPhoto} className="space-y-3 bg-whitewash p-4 rounded">
+              <input
+                type="url"
+                value={photoUrl}
+                onChange={(e) => setPhotoUrl(e.target.value)}
+                placeholder="Photo URL"
+                className="w-full border border-[#D7DECF] rounded p-2 text-[13px]"
+              />
+              <input
+                type="text"
+                value={photoCaption}
+                onChange={(e) => setPhotoCaption(e.target.value)}
+                placeholder="Caption (optional)"
+                className="w-full border border-[#D7DECF] rounded p-2 text-[13px]"
+              />
+              <button
+                type="submit"
+                className="w-full bg-bottle text-white py-2 rounded text-[13px] font-medium hover:opacity-90"
+              >
+                + Add Photo
+              </button>
+            </form>
           </div>
         </main>
 
