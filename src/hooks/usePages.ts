@@ -4,7 +4,7 @@ export interface Page {
   id: string;
   title: string;
   slug: string;
-  parent_id?: string;
+  parent_id: string | null;
   brief?: string;
   created_at: string;
   updated_at: string;

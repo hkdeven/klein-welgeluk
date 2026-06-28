@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
 
 export async function GET(request: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 500 }
+      );
+    }
+
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
@@ -30,6 +39,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase not configured" },
+        { status: 500 }
+      );
+    }
+
     const { email, display_name, short_name, role } = await request.json();
 
     if (!email || !display_name || !short_name) {
