@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Shared component styles */
+.shell {
+  @apply grid grid-cols-[240px_1fr] max-w-[1180px] mx-auto min-h-screen bg-white shadow-[0_0_60px_rgba(43,64,48,0.06)];
+}
+
+.ledger {
+  @apply bg-bottle text-whitewash p-[28px_0_40px];
+}
+
+.house-name {
+  @apply font-fraunces text-[20px] font-medium px-[22px] pb-[22px] border-b border-[rgba(250,249,245,0.18)] mb-[18px] tracking-[0.01em];
+}
+
+.house-name small {
+  @apply block font-sans text-[10px] tracking-[0.12em] uppercase text-mist mt-1 font-normal;
+}
+
+.topbar {
+  @apply flex justify-between items-center px-[52px] pt-4;
+}
+
+main {
+  @apply px-[52px] py-[18px] pb-[70px];
+}
+
+.title-block {
+  @apply border-b-[1.5px] border-bottle pb-[18px] mb-[24px] flex justify-between items-end gap-6;
+}
+
+.title-block h1 {
+  @apply font-fraunces text-[34px] font-medium m-0 text-bottle;
+}
+
+.login-page {
+  @apply min-h-screen flex items-center justify-center bg-whitewash p-[40px_20px];
+}
+
+.login-card {
+  @apply bg-white border border-[#ECE8DC] rounded-md max-w-[420px] w-full p-[38px_36px_30px] shadow-[0_6px_40px_rgba(43,64,48,0.06)];
+}
+
+.primary-btn {
+  @apply w-full bg-bottle text-white border-none rounded-md py-[11px] text-[13px] font-sans font-medium cursor-pointer;
+}
+
+.sso-btn {
+  @apply flex items-center justify-center gap-[10px] w-full border border-[#D7DECF] rounded p-[10px_14px] text-[13px] text-pine bg-white mb-[9px];
+}
+
+.field-input {
+  @apply w-full border border-[#D7DECF] rounded p-[10px_12px] text-[13px] font-sans text-pine bg-white mb-[9px] outline-none;
+}
+
+.divider {
+  @apply flex items-center gap-[10px] my-[18px_0_14px] text-[10.5px] tracking-[0.12em] text-mist uppercase;
+}
+
+.divider::before,
+.divider::after {
+  @apply flex-1 h-px bg-[#E5E1D3];
+  content: "";
+}
+
+.site-footer {
+  @apply bg-bottle text-[rgba(250,249,245,0.7)] py-6 px-8 flex items-center justify-between flex-wrap gap-[14px] text-[12px];
+}
