@@ -16,7 +16,8 @@
       "Bash(cp -r /Users/devenblackburn/Downloads/klein-welgeluk/src/lib /Users/devenblackburn/Downloads/src/)",
       "Bash(mkdir -p \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/\\\\[...slug\\\\]\")",
       "Bash(cp /Users/devenblackburn/Downloads/klein-welgeluk/src/app/\\\\[...slug\\\\]/page.tsx \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/[...slug]/page.tsx\")",
-      "Bash(rm -rf \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/[...slug]\")"
+      "Bash(rm -rf \"/Users/devenblackburn/Downloads/klein-welgeluk/src/app/[...slug]\")",
+      "Bash(rm -rf /Users/devenblackburn/Downloads/klein-welgeluk/src/app/\\\\\\\\[...slug\\\\\\\\] && git add -A && git commit -m \"Remove broken dynamic routing folder\" && git push --set-upstream origin main)"
     ]
   }
 }
