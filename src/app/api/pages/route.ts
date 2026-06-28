@@ -1,43 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Mock data - in production, this comes from Supabase
-const mockPages = [
-  {
-    id: "1",
-    title: "Building",
-    slug: "building",
-    parent_id: null,
-    brief: "Main building structure",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "Services",
-    slug: "services",
-    parent_id: null,
-    brief: "Utilities and services",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    title: "Exterior",
-    slug: "exterior",
-    parent_id: null,
-    brief: "Outdoor features",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: NextRequest) {
   try {
+    const { data: pages, error } = await supabase
+      .from("pages")
+      .select("*")
+      .order("sort_order", { ascending: true });
+
+    if (error) throw error;
+
     return NextResponse.json({
-      pages: mockPages,
-      total: mockPages.length,
+      pages: pages || [],
+      total: pages?.length || 0,
     });
   } catch (error) {
+    console.error("Pages fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch pages" },
       { status: 500 }
@@ -56,18 +39,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newPage = {
-      id: Date.now().toString(),
-      title,
-      slug: title.toLowerCase().replace(/\s+/g, "-"),
-      parent_id: parent_id || null,
-      brief: brief || "",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const slug = title.toLowerCase().replace(/\s+/g, "-");
+
+    const { data: newPage, error } = await supabase
+      .from("pages")
+      .insert([
+        {
+          title,
+          slug,
+          parent_id: parent_id || null,
+          brief: brief || "",
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(newPage, { status: 201 });
   } catch (error) {
+    console.error("Pages create error:", error);
     return NextResponse.json(
       { error: "Failed to create page" },
       { status: 500 }

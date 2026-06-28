@@ -1,47 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
-
-const mockPages = [
-  {
-    id: "1",
-    title: "Building",
-    slug: "building",
-    parent_id: null,
-    children: [
-      { id: "2", title: "Bedrooms", slug: "building/bedrooms", parent_id: "1" },
-      { id: "3", title: "Bathroom", slug: "building/bathroom", parent_id: "1" },
-      { id: "4", title: "Kitchen", slug: "building/kitchen", parent_id: "1" },
-      { id: "5", title: "Loft", slug: "building/loft", parent_id: "1" },
-    ],
-  },
-  {
-    id: "6",
-    title: "Services",
-    slug: "services",
-    parent_id: null,
-    children: [
-      { id: "7", title: "Solar", slug: "services/solar", parent_id: "6" },
-      { id: "8", title: "Borehol", slug: "services/borehol", parent_id: "6" },
-    ],
-  },
-  {
-    id: "9",
-    title: "Exterior",
-    slug: "exterior",
-    parent_id: null,
-    children: [
-      {
-        id: "10",
-        title: "Earthworks",
-        slug: "exterior/earthworks",
-        parent_id: "9",
-      },
-    ],
-  },
-];
+import { usePages } from "@/hooks/usePages";
 
 const mockUser = {
   id: "1",
@@ -52,6 +14,7 @@ const mockUser = {
 };
 
 export default function HomePage() {
+  const { pages, loading } = usePages();
   const [editMode, setEditMode] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
 
@@ -69,10 +32,26 @@ export default function HomePage() {
     setCarouselIndex((prev) => (prev + 1) % carouselImages.length);
   };
 
+  // Flatten pages for display
+  const allPages = pages
+    .flatMap((parent) => parent.children || [])
+    .filter((p) => p);
+
+  if (loading) {
+    return (
+      <div className="shell">
+        <Sidebar pages={pages} user={mockUser} editMode={editMode} />
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-sage">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="shell">
       <Sidebar
-        pages={mockPages}
+        pages={pages}
         user={mockUser}
         editMode={editMode}
         onEditModeChange={setEditMode}
@@ -166,24 +145,28 @@ export default function HomePage() {
               Progress across the project
               <span className="flex-1 h-px bg-[#E5E1D3]"></span>
             </h2>
-            <div className="grid grid-cols-2 gap-3.5">
-              {mockPages.map((parent) =>
-                parent.children?.map((child) => (
+            {allPages.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3.5">
+                {allPages.map((page) => (
                   <div
-                    key={child.id}
+                    key={page.id}
                     className="border border-[#ECE8DC] rounded p-3.5 bg-whitewash"
                   >
                     <div className="font-fraunces text-base text-bottle font-medium mb-1.5">
-                      {child.title}
+                      {page.title}
                     </div>
                     <div className="flex items-center gap-1.5 font-mono text-[10.5px] text-sage mb-1">
                       <span>Present status:</span>
                       <span className="text-brass font-semibold">Ideation</span>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-whitewash p-4 rounded text-center text-sage">
+                No pages yet
+              </div>
+            )}
           </div>
 
           {/* Recent activity */}

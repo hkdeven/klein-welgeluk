@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Mock data
-const mockEvents: any[] = [];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,25 +13,33 @@ export async function GET(request: NextRequest) {
     const end_date = searchParams.get("end_date");
     const event_type = searchParams.get("event_type");
 
-    let events = mockEvents;
+    let query = supabase
+      .from("calendar_events")
+      .select("*")
+      .order("event_date", { ascending: true });
 
-    if (start_date && end_date) {
-      events = events.filter(
-        (e: any) =>
-          new Date(e.event_date) >= new Date(start_date) &&
-          new Date(e.event_date) <= new Date(end_date)
-      );
+    if (start_date) {
+      query = query.gte("event_date", start_date);
+    }
+
+    if (end_date) {
+      query = query.lte("event_date", end_date);
     }
 
     if (event_type && event_type !== "all") {
-      events = events.filter((e: any) => e.event_type === event_type);
+      query = query.eq("event_type", event_type);
     }
 
+    const { data: events, error } = await query;
+
+    if (error) throw error;
+
     return NextResponse.json({
-      events,
-      total: events.length,
+      events: events || [],
+      total: events?.length || 0,
     });
   } catch (error) {
+    console.error("Calendar fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch events" },
       { status: 500 }
@@ -38,7 +49,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { title, event_date, event_time, end_date, event_type, description, page_id } = await request.json();
+    const {
+      title,
+      event_date,
+      event_time,
+      end_date,
+      event_type,
+      description,
+      page_id,
+      created_by,
+    } = await request.json();
 
     if (!title || !event_date || !event_type) {
       return NextResponse.json(
@@ -47,22 +67,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newEvent = {
-      id: Date.now().toString(),
-      title,
-      event_date,
-      event_time: event_time || null,
-      end_date: end_date || null,
-      event_type,
-      description: description || "",
-      page_id: page_id || null,
-      created_by: "user_id",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    const { data: newEvent, error } = await supabase
+      .from("calendar_events")
+      .insert([
+        {
+          title,
+          event_date,
+          event_time: event_time || null,
+          end_date: end_date || null,
+          event_type,
+          description: description || "",
+          page_id: page_id || null,
+          created_by,
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
 
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
+    console.error("Calendar create error:", error);
     return NextResponse.json(
       { error: "Failed to create event" },
       { status: 500 }

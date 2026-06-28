@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-// Mock data
-const mockDocuments: any[] = [];
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,14 +13,23 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const quotes = searchParams.get("quotes");
 
-    let docs = mockDocuments;
+    let query = supabase
+      .from("documents")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (page_id) {
-      docs = docs.filter((d: any) => d.page_id === page_id);
+      query = query.eq("page_id", page_id);
     }
 
+    const { data: documents, error } = await query;
+
+    if (error) throw error;
+
+    let filtered = documents || [];
+
     if (search) {
-      docs = docs.filter(
+      filtered = filtered.filter(
         (d: any) =>
           d.filename.toLowerCase().includes(search.toLowerCase()) ||
           d.caption?.toLowerCase().includes(search.toLowerCase())
@@ -25,7 +37,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (quotes) {
-      docs = docs.filter(
+      filtered = filtered.filter(
         (d: any) =>
           d.filename.toLowerCase().includes("quote") ||
           d.caption?.toLowerCase().includes("quote")
@@ -33,10 +45,11 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      documents: docs,
-      total: docs.length,
+      documents: filtered,
+      total: filtered.length,
     });
   } catch (error) {
+    console.error("Documents fetch error:", error);
     return NextResponse.json(
       { error: "Failed to fetch documents" },
       { status: 500 }
@@ -50,6 +63,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const page_id = formData.get("page_id") as string;
     const caption = formData.get("caption") as string;
+    const user_id = formData.get("user_id") as string;
 
     if (!file || !page_id) {
       return NextResponse.json(
@@ -58,21 +72,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In production, upload to Supabase Storage
-    const newDocument = {
-      id: Date.now().toString(),
-      page_id,
-      filename: file.name,
-      storage_path: `documents/${page_id}/${Date.now()}_${file.name}`,
-      file_size: file.size,
-      file_type: file.type.split("/")[1] || "file",
-      caption: caption || "",
-      uploaded_by: "user_id",
-      created_at: new Date().toISOString(),
-    };
+    // Upload file to Supabase Storage
+    const fileName = `${Date.now()}_${file.name}`;
+    const filePath = `documents/${page_id}/${fileName}`;
+
+    const fileBuffer = await file.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from("documents")
+      .upload(filePath, Buffer.from(fileBuffer), {
+        contentType: file.type,
+      });
+
+    if (uploadError) throw uploadError;
+
+    // Create document record in database
+    const { data: newDocument, error: dbError } = await supabase
+      .from("documents")
+      .insert([
+        {
+          page_id,
+          filename: file.name,
+          storage_path: filePath,
+          file_size: file.size,
+          file_type: file.name.split(".").pop() || "file",
+          caption: caption || "",
+          uploaded_by: user_id,
+        },
+      ])
+      .select()
+      .single();
+
+    if (dbError) throw dbError;
 
     return NextResponse.json(newDocument, { status: 201 });
   } catch (error) {
+    console.error("Document upload error:", error);
     return NextResponse.json(
       { error: "Failed to upload document" },
       { status: 500 }
