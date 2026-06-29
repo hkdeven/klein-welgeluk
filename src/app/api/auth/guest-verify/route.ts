@@ -1,41 +1,51 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+import { createClient } from "@supabase/supabase-js";
+
+export const dynamic = "force-dynamic";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabase = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey)
+  : null;
+
+const hash = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
 
 export async function POST(request: NextRequest) {
   try {
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+    }
     const { passcode } = await request.json();
-
     if (!passcode) {
+      return NextResponse.json({ error: "Passcode required" }, { status: 400 });
+    }
+
+    const { data: row, error } = await supabase
+      .from("guest_passcode")
+      .select("passcode_hash")
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (!row) {
       return NextResponse.json(
-        { error: "Invalid passcode" },
-        { status: 401 }
+        { error: "Guest access hasn't been set up yet" },
+        { status: 400 }
       );
     }
 
-    // In production, compare with hashed passcode
-    // For now, allow any non-empty passcode as demo
-    if (passcode.length < 4) {
-      return NextResponse.json(
-        { error: "Invalid passcode" },
-        { status: 401 }
-      );
+    if (hash(passcode) !== row.passcode_hash) {
+      return NextResponse.json({ error: "Incorrect passcode" }, { status: 401 });
     }
 
-    const response = NextResponse.json({
-      success: true,
-      role: "guest",
-      token: Buffer.from(JSON.stringify({ role: "guest" })).toString("base64"),
-    });
-
-    response.cookies.set("guest_session", "valid", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-    });
-
-    return response;
+    return NextResponse.json({ success: true, role: "guest" });
   } catch (error) {
     return NextResponse.json(
-      { error: "Authentication failed" },
+      { error: `Verify error: ${(error as Error).message}` },
       { status: 500 }
     );
   }

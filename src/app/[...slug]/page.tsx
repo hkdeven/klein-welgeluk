@@ -4,24 +4,19 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useEditMode } from "@/components/EditModeContext";
+import { useCurrentUser } from "@/components/AuthProvider";
 import EditBanner from "@/components/EditBanner";
 import PageMedia from "@/components/PageMedia";
 import { DOC_CATEGORIES } from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
 import { usePages, type Page } from "@/hooks/usePages";
 
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
 
 export default function DynamicPage() {
   const { pages, loading } = usePages();
   const toast = useToast();
   const { editMode } = useEditMode();
+  const mockUser = useCurrentUser();
   const pathname = usePathname();
   const slug = decodeURIComponent((pathname || "").replace(/^\//, ""));
 

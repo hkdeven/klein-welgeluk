@@ -145,9 +145,17 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
   return (
     <div>
       <nav className="ledger w-60 flex-shrink-0 fixed h-screen overflow-y-auto">
-        <div className="house-name">
-          Klein Welgeluk
-          <small>build diary</small>
+        <div className="logo-lockup">
+          <div className="mono-badge">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/kw-monogram.png" alt="Klein Welgeluk" />
+          </div>
+          <div className="word">
+            Klein
+            <br />
+            Welgeluk
+            <small>build diary</small>
+          </div>
         </div>
 
         <div className="px-[22px]">

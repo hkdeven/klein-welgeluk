@@ -12,8 +12,8 @@ export interface AppUser {
   email?: string;
 }
 
-// Used before sign-in so the app stays usable during the auth rollout.
-// Once you flip ENFORCE_AUTH on (force login), this is never shown.
+// Shown only in the brief moment before the session resolves; gating means a
+// real user or guest is always required to see the app.
 const FALLBACK_USER: AppUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
   display_name: "Deven Blackburn",
@@ -22,29 +22,46 @@ const FALLBACK_USER: AppUser = {
   avatar_url: null,
 };
 
+const GUEST_USER: AppUser = {
+  id: "guest",
+  display_name: "Guest",
+  short_name: "Guest",
+  role: "guest",
+  avatar_url: null,
+};
+
+const GUEST_KEY = "kw_guest";
+
 interface AuthValue {
   user: AppUser;
   signedIn: boolean;
+  isGuest: boolean;
+  canWrite: boolean;
   loading: boolean;
   signInWithGoogle: () => void;
   signInWithMicrosoft: () => void;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
+  enterGuest: () => void;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthValue>({
   user: FALLBACK_USER,
   signedIn: false,
+  isGuest: false,
+  canWrite: false,
   loading: true,
   signInWithGoogle: () => {},
   signInWithMicrosoft: () => {},
   signInWithEmail: async () => ({}),
+  enterGuest: () => {},
   signOut: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AppUser>(FALLBACK_USER);
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [signedIn, setSignedIn] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const handleSession = async (session: any) => {
@@ -61,21 +78,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }),
         });
         if (res.ok) {
-          const appUser = await res.json();
-          setUser({ ...appUser, email: authUser.email });
+          const u = await res.json();
+          setAppUser({ ...u, email: authUser.email });
           setSignedIn(true);
         }
       } catch {
-        /* ignore — leave fallback */
+        /* ignore */
       }
     } else {
-      setUser(FALLBACK_USER);
+      setAppUser(null);
       setSignedIn(false);
     }
     setLoading(false);
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem(GUEST_KEY) === "1") {
+      setIsGuest(true);
+    }
     let active = true;
     supabaseClient.auth.getSession().then(({ data }) => {
       if (active) handleSession(data.session);
@@ -103,21 +123,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     return { error: error?.message };
   };
+  const enterGuest = () => {
+    if (typeof window !== "undefined") localStorage.setItem(GUEST_KEY, "1");
+    setIsGuest(true);
+  };
   const signOut = async () => {
     await supabaseClient.auth.signOut();
-    setUser(FALLBACK_USER);
+    if (typeof window !== "undefined") localStorage.removeItem(GUEST_KEY);
+    setAppUser(null);
     setSignedIn(false);
+    setIsGuest(false);
   };
+
+  const user = signedIn && appUser ? appUser : isGuest ? GUEST_USER : FALLBACK_USER;
 
   return (
     <AuthContext.Provider
       value={{
         user,
         signedIn,
+        isGuest,
+        canWrite: signedIn, // guests are read-only
         loading,
         signInWithGoogle,
         signInWithMicrosoft,
         signInWithEmail,
+        enterGuest,
         signOut,
       }}
     >

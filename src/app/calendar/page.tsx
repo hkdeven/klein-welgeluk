@@ -4,14 +4,8 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
 import { useEditMode } from "@/components/EditModeContext";
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
 
 type CalendarView = "day" | "week" | "month" | "year";
 
@@ -66,6 +60,8 @@ const typeClass = (t: string) =>
 export default function CalendarPage() {
   const toast = useToast();
   const { editMode } = useEditMode();
+  const mockUser = useCurrentUser();
+  const { canWrite } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -461,12 +457,14 @@ export default function CalendarPage() {
               ))}
             </div>
 
-            <button
-              onClick={() => setShowAddEvent(true)}
-              className="text-sage text-[12px] underline hover:text-bottle cursor-pointer"
-            >
-              + add event
-            </button>
+            {canWrite && (
+              <button
+                onClick={() => setShowAddEvent(true)}
+                className="text-sage text-[12px] underline hover:text-bottle cursor-pointer"
+              >
+                + add event
+              </button>
+            )}
           </div>
 
           {/* Type filter */}
@@ -654,12 +652,14 @@ export default function CalendarPage() {
                   </p>
                 )}
                 <div className="flex gap-2 pt-5">
-                  <button
-                    onClick={() => deleteEvent(selectedEvent.id)}
-                    className="flex-1 border border-[#E2C9C9] text-[#B5524F] rounded py-2 text-[13px] font-medium hover:bg-[#FBF3F3]"
-                  >
-                    Delete event
-                  </button>
+                  {canWrite && (
+                    <button
+                      onClick={() => deleteEvent(selectedEvent.id)}
+                      className="flex-1 border border-[#E2C9C9] text-[#B5524F] rounded py-2 text-[13px] font-medium hover:bg-[#FBF3F3]"
+                    >
+                      Delete event
+                    </button>
+                  )}
                   <button
                     onClick={() => setSelectedEvent(null)}
                     className="flex-1 border border-[#D7DECF] rounded py-2 text-[13px] text-sage hover:bg-whitewash"

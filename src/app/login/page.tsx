@@ -1,10 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const toast = useToast();
+  const { signedIn, signInWithGoogle, signInWithEmail, enterGuest } = useAuth();
   const [isGuest, setIsGuest] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passcode, setPasscode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Once authenticated, leave the login page.
+  useEffect(() => {
+    if (signedIn) router.push("/");
+  }, [signedIn, router]);
+
+  const handleEmailSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password) return;
+    setBusy(true);
+    const { error } = await signInWithEmail(email, password);
+    setBusy(false);
+    if (error) toast.error(error);
+    else router.push("/");
+  };
+
+  const handleGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/auth/guest-verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode }),
+      });
+      if (!res.ok) throw new Error("Invalid passcode");
+      enterGuest();
+      router.push("/");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   return (
     <div className="login-page">
@@ -23,33 +64,34 @@ export default function LoginPage() {
             Sign in
           </h3>
 
-          <button className="sso-btn">
+          <button className="sso-btn" onClick={signInWithGoogle}>
             <span className="w-[18px] h-[18px] flex items-center justify-center font-bold text-[#4285F4]">
               G
             </span>
             Continue with Google
           </button>
 
-          <button className="sso-btn">
-            <span className="w-[18px] h-[18px] flex items-center justify-center font-bold text-[#00A4EF]">
-              ⊞
-            </span>
-            Continue with Microsoft
-          </button>
-
           <div className="divider">or sign in with email</div>
 
-          <input
-            className="field-input"
-            type="email"
-            placeholder="Email"
-          />
-          <input
-            className="field-input"
-            type="password"
-            placeholder="Password"
-          />
-          <button className="primary-btn">Sign in</button>
+          <form onSubmit={handleEmailSignIn}>
+            <input
+              className="field-input"
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <input
+              className="field-input"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <button className="primary-btn" type="submit" disabled={busy}>
+              {busy ? "Signing in…" : "Sign in"}
+            </button>
+          </form>
 
           <div className="text-center text-[11px] text-mist mt-3.5">
             For owners, architect, engineer, contractors.
@@ -81,17 +123,23 @@ export default function LoginPage() {
           </h3>
 
           <p className="text-[13px] text-sage text-center leading-[1.5] mb-[18px]">
-            Enter the passcode shared by Deven or Wernardt. You'll be able to
-            browse the whole project, but won't be able to comment or make
+            Enter the passcode shared by Deven or Wernardt. You&apos;ll be able to
+            browse the whole project, but won&apos;t be able to comment or make
             changes.
           </p>
 
-          <input
-            className="field-input"
-            type="text"
-            placeholder="Passcode"
-          />
-          <button className="primary-btn">View the site</button>
+          <form onSubmit={handleGuest}>
+            <input
+              className="field-input"
+              type="text"
+              placeholder="Passcode"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+            />
+            <button className="primary-btn" type="submit">
+              View the site
+            </button>
+          </form>
 
           <div className="text-center text-[12px] text-sage mt-[18px] pt-[18px] border-t border-[#ECE8DC]">
             Collaborator?{" "}

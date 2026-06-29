@@ -5,15 +5,9 @@ import EditBanner from "@/components/EditBanner";
 import DocUploadModal from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
 import { useEditMode } from "@/components/EditModeContext";
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
 
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
@@ -27,6 +21,8 @@ export default function DocumentsPage() {
   const { pages } = usePages();
   const toast = useToast();
   const { editMode } = useEditMode();
+  const mockUser = useCurrentUser();
+  const { canWrite } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [documents, setDocuments] = useState<any[]>([]);
   const [pageId, setPageId] = useState<string | null>(null);
@@ -106,12 +102,14 @@ export default function DocumentsPage() {
                 </button>
               ))}
             </div>
-            <button
-              onClick={() => setDocModal(true)}
-              className="text-sage text-[12px] underline cursor-pointer hover:text-bottle"
-            >
-              + upload document
-            </button>
+            {canWrite && (
+              <button
+                onClick={() => setDocModal(true)}
+                className="text-sage text-[12px] underline cursor-pointer hover:text-bottle"
+              >
+                + upload document
+              </button>
+            )}
           </div>
 
           {/* Document list */}
@@ -136,9 +134,11 @@ export default function DocumentsPage() {
                 </div>
                 <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
                   {doc.category && <span className="tag-chip">{doc.category}</span>}
-                  <span className="del-badge" onClick={() => deleteDocument(doc.id)}>
-                    ✕ remove
-                  </span>
+                  {canWrite && (
+                    <span className="del-badge" onClick={() => deleteDocument(doc.id)}>
+                      ✕ remove
+                    </span>
+                  )}
                 </div>
               </div>
             ))

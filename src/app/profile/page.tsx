@@ -1,21 +1,39 @@
 "use client";
 
 import { useState } from "react";
-
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
+import { useToast } from "@/components/Toast";
 
 export default function ProfilePage() {
+  const mockUser = useCurrentUser();
+  const { signedIn, signOut } = useAuth();
+  const toast = useToast();
+  const [guestPass, setGuestPass] = useState("");
   const [notifications, setNotifications] = useState({
     mentioned: true,
     assigned: true,
     stage_moved: true,
   });
+
+  const setGuestPasscode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (guestPass.length < 4) {
+      toast.error("Passcode must be at least 4 characters");
+      return;
+    }
+    try {
+      const res = await fetch("/api/guest-passcode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ passcode: guestPass, set_by: mockUser.id }),
+      });
+      if (!res.ok) throw new Error("Failed to set passcode");
+      setGuestPass("");
+      toast.success("Guest passcode updated");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
 
   return (
     <>
@@ -65,7 +83,7 @@ export default function ProfilePage() {
                   Email
                 </label>
                 <div className="border border-[#ECE8DC] rounded bg-whitewash p-2.5 text-[13.5px] text-pine">
-                  deven@hikesa.co.za
+                  {mockUser.email || "—"}
                 </div>
               </div>
 
@@ -82,8 +100,16 @@ export default function ProfilePage() {
                 <label className="text-[10px] tracking-[0.1em] uppercase text-sage block mb-1.5">
                   Sign-in method
                 </label>
-                <div className="border border-[#ECE8DC] rounded bg-whitewash p-2.5 text-[13.5px] text-sage italic">
-                  Google OAuth
+                <div className="border border-[#ECE8DC] rounded bg-whitewash p-2.5 text-[13.5px] text-sage italic flex items-center justify-between">
+                  <span>{signedIn ? "Signed in" : "Not signed in"}</span>
+                  {signedIn && (
+                    <button
+                      onClick={signOut}
+                      className="not-italic text-bottle underline text-[12px]"
+                    >
+                      Sign out
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -144,6 +170,35 @@ export default function ProfilePage() {
               </label>
             </div>
           </div>
+
+          {/* Guest access (owners only) */}
+          {mockUser.role === "owner" && (
+            <div className="mb-8">
+              <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
+                Guest access
+                <span className="flex-1 h-px bg-[#E5E1D3]"></span>
+              </h2>
+              <p className="text-[12px] text-sage mb-2">
+                Set the passcode you share with guests. They can browse read-only —
+                no comments, uploads, or edits.
+              </p>
+              <form onSubmit={setGuestPasscode} className="flex gap-2 max-w-md">
+                <input
+                  type="text"
+                  value={guestPass}
+                  onChange={(e) => setGuestPass(e.target.value)}
+                  placeholder="New guest passcode"
+                  className="flex-1 border border-[#D7DECF] rounded p-2 text-[13px]"
+                />
+                <button
+                  type="submit"
+                  className="bg-bottle text-white px-4 py-2 rounded text-[13px] font-medium hover:opacity-90"
+                >
+                  Save passcode
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* Danger zone */}
           <div>

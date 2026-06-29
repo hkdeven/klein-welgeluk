@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
 import { useEditMode } from "@/components/EditModeContext";
+import { useCurrentUser } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
 
 const storageUrl = (path: string) =>
@@ -21,18 +22,12 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
 
 export default function HomePage() {
   const { pages, loading } = usePages();
   const toast = useToast();
   const { editMode } = useEditMode();
+  const mockUser = useCurrentUser();
   const [assigned, setAssigned] = useState<any[]>([]);
   const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
   const [slides, setSlides] = useState<any[]>([]);

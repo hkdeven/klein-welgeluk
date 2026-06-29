@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import DocUploadModal from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
+import { useAuth } from "@/components/AuthProvider";
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
@@ -19,6 +20,7 @@ interface PageMediaProps {
 
 export default function PageMedia({ pageId, user, defaultCategory }: PageMediaProps) {
   const toast = useToast();
+  const { canWrite } = useAuth();
 
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -197,41 +199,47 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           </div>
           <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
             {doc.category && <span className="tag-chip">{doc.category}</span>}
-            <span className="del-badge" onClick={() => deleteDocument(doc.id)}>
-              ✕ remove
-            </span>
+            {canWrite && (
+              <span className="del-badge" onClick={() => deleteDocument(doc.id)}>
+                ✕ remove
+              </span>
+            )}
           </div>
         </div>
       ))}
-      <button
-        className="doc-row"
-        style={{ borderStyle: "dashed", color: "var(--sage)", justifyContent: "center", cursor: "pointer", width: "100%" }}
-        onClick={() => setDocModal(true)}
-      >
-        + upload document
-      </button>
+      {canWrite && (
+        <button
+          className="doc-row"
+          style={{ borderStyle: "dashed", color: "var(--sage)", justifyContent: "center", cursor: "pointer", width: "100%" }}
+          onClick={() => setDocModal(true)}
+        >
+          + upload document
+        </button>
+      )}
 
       {/* Photos */}
       <h2 className="section-h">Photo gallery</h2>
-      <div className="gallery-bar">
-        <input
-          value={photoCaption}
-          onChange={(e) => setPhotoCaption(e.target.value)}
-          placeholder="Photo description (optional)"
-          className="field-input"
-          style={{ marginBottom: 0, maxWidth: 320 }}
-        />
-        <div className="gallery-actions">
-          <label style={{ cursor: "pointer" }}>
-            + Upload
-            <input type="file" accept="image/*" onChange={uploadPhotoFile} className="hidden" />
-          </label>
-          <span style={{ cursor: "pointer" }} onClick={() => setShowLink((s) => !s)}>
-            + Add via link
-          </span>
+      {canWrite && (
+        <div className="gallery-bar">
+          <input
+            value={photoCaption}
+            onChange={(e) => setPhotoCaption(e.target.value)}
+            placeholder="Photo description (optional)"
+            className="field-input"
+            style={{ marginBottom: 0, maxWidth: 320 }}
+          />
+          <div className="gallery-actions">
+            <label style={{ cursor: "pointer" }}>
+              + Upload
+              <input type="file" accept="image/*" onChange={uploadPhotoFile} className="hidden" />
+            </label>
+            <span style={{ cursor: "pointer" }} onClick={() => setShowLink((s) => !s)}>
+              + Add via link
+            </span>
+          </div>
         </div>
-      </div>
-      {showLink && (
+      )}
+      {canWrite && showLink && (
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
           <input
             type="url"
@@ -258,16 +266,18 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
               >
                 <img src={url} alt={p.caption || ""} />
                 {p.caption && <div className="caption">{p.caption}</div>}
-                <button
-                  className="del-badge"
-                  style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deletePhoto(p.id);
-                  }}
-                >
-                  ✕
-                </button>
+                {canWrite && (
+                  <button
+                    className="del-badge"
+                    style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deletePhoto(p.id);
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             );
           })}
@@ -288,25 +298,33 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           <div className="comment-card">
             <div className="who">
               {c.author?.short_name || "Unknown"}
-              <button className="del" onClick={() => deleteComment(c.id)}>
-                delete
-              </button>
+              {canWrite && (
+                <button className="del" onClick={() => deleteComment(c.id)}>
+                  delete
+                </button>
+              )}
             </div>
             <div className="txt rich-text" dangerouslySetInnerHTML={{ __html: c.body }} />
           </div>
         </div>
       ))}
-      <form onSubmit={addComment} style={{ marginTop: 6 }}>
-        <RichTextEditor
-          value={newComment}
-          onChange={setNewComment}
-          placeholder="Add a comment..."
-          minHeight={70}
-        />
-        <button type="submit" className="post-btn" style={{ marginTop: 10 }}>
-          Post
-        </button>
-      </form>
+      {canWrite ? (
+        <form onSubmit={addComment} style={{ marginTop: 6 }}>
+          <RichTextEditor
+            value={newComment}
+            onChange={setNewComment}
+            placeholder="Add a comment..."
+            minHeight={70}
+          />
+          <button type="submit" className="post-btn" style={{ marginTop: 10 }}>
+            Post
+          </button>
+        </form>
+      ) : (
+        <p className="desc-text" style={{ color: "var(--mist)" }}>
+          Guests can read comments but can&apos;t post.
+        </p>
+      )}
 
       <DocUploadModal
         open={docModal}

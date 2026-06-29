@@ -6,14 +6,8 @@ import PageMedia from "@/components/PageMedia";
 import EditBanner from "@/components/EditBanner";
 import { useToast } from "@/components/Toast";
 import { useEditMode } from "@/components/EditModeContext";
+import { useCurrentUser } from "@/components/AuthProvider";
 
-const mockUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
-  avatar_url: null,
-};
 
 interface BriefSections {
   scope: string;
@@ -40,6 +34,7 @@ const TABS: { key: BriefTab; label: string; hint: string }[] = [
 export default function OverviewPage() {
   const toast = useToast();
   const { editMode } = useEditMode();
+  const mockUser = useCurrentUser();
 
   const isOwner = mockUser.role === "owner";
   const canEdit = isOwner && editMode;
