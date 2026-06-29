@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { ToastProvider } from "@/components/Toast";
+import { AuthProvider } from "@/components/AuthProvider";
+import AppFrame from "@/components/AppFrame";
 
 export const metadata: Metadata = {
   title: "Klein Welgeluk — Build Diary",
@@ -19,7 +21,11 @@ export default function RootLayout({
         <meta name="robots" content="noindex, nofollow" />
       </head>
       <body>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <AppFrame>{children}</AppFrame>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );

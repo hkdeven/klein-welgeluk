@@ -1,19 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
-
-const mockPages = [
-  {
-    id: "1",
-    title: "Building",
-    slug: "building",
-    parent_id: null,
-    children: [],
-  },
-];
 
 const mockUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
@@ -24,7 +11,6 @@ const mockUser = {
 };
 
 export default function ProfilePage() {
-  const [editMode, setEditMode] = useState(false);
   const [notifications, setNotifications] = useState({
     mentioned: true,
     assigned: true,
@@ -32,17 +18,8 @@ export default function ProfilePage() {
   });
 
   return (
-    <div className="shell">
-      <Sidebar pages={mockPages} editMode={editMode} />
-
-      <div className="flex-1">
-        <Topbar
-          user={mockUser}
-          editMode={editMode}
-          onEditModeChange={setEditMode}
-        />
-        <main>
-          <div className="title-block">
+    <>
+      <div className="title-block">
             <h1>Your profile</h1>
             <div className="text-sage text-[12px]">
               Signed in as {mockUser.display_name} · {mockUser.role}
@@ -184,10 +161,6 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
-        </main>
-
-        <Footer />
-      </div>
-    </div>
+    </>
   );
 }

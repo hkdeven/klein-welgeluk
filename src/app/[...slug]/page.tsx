@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import RichTextEditor from "@/components/RichTextEditor";
+import { useEditMode } from "@/components/EditModeContext";
 import EditBanner from "@/components/EditBanner";
 import PageMedia from "@/components/PageMedia";
 import { DOC_CATEGORIES } from "@/components/DocUploadModal";
@@ -23,7 +21,7 @@ const mockUser = {
 export default function DynamicPage() {
   const { pages, loading } = usePages();
   const toast = useToast();
-  const [editMode, setEditMode] = useState(false);
+  const { editMode } = useEditMode();
   const pathname = usePathname();
   const slug = decodeURIComponent((pathname || "").replace(/^\//, ""));
 
@@ -207,13 +205,8 @@ export default function DynamicPage() {
   const availableUsers = users.filter((u) => !assignedIds.includes(u.id));
 
   return (
-    <div className="shell">
-      <Sidebar pages={pages} editMode={editMode} />
-
-      <div className="flex-1">
-        <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
-        <main>
-          {loading ? (
+    <>
+      {loading ? (
             <p className="text-sage">Loading...</p>
           ) : !page ? (
             <div className="title-block">
@@ -434,10 +427,6 @@ export default function DynamicPage() {
               <PageMedia pageId={pageId} user={mockUser} defaultCategory={defaultCategory} />
             </>
           )}
-        </main>
-
-        <Footer />
-      </div>
-    </div>
+    </>
   );
 }

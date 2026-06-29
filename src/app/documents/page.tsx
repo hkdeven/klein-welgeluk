@@ -1,12 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import EditBanner from "@/components/EditBanner";
 import DocUploadModal from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
+import { useEditMode } from "@/components/EditModeContext";
 import { usePages } from "@/hooks/usePages";
 
 const mockUser = {
@@ -28,7 +26,7 @@ const FILTERS = ["all", "building", "services", "exterior", "quotes"];
 export default function DocumentsPage() {
   const { pages } = usePages();
   const toast = useToast();
-  const [editMode, setEditMode] = useState(false);
+  const { editMode } = useEditMode();
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [documents, setDocuments] = useState<any[]>([]);
   const [pageId, setPageId] = useState<string | null>(null);
@@ -84,17 +82,12 @@ export default function DocumentsPage() {
       : documents.filter((d: any) => d.category === selectedFilter);
 
   return (
-    <div className="shell">
-      <Sidebar pages={pages} editMode={editMode} />
+    <>
+      <div className="title-block">
+        <h1>Documents</h1>
+      </div>
 
-      <div className="flex-1">
-        <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
-        <main>
-          <div className="title-block">
-            <h1>Documents</h1>
-          </div>
-
-          {editMode && <EditBanner />}
+      {editMode && <EditBanner />}
 
           {/* Filter bar */}
           <div className="flex justify-between items-center mb-[18px] gap-4">
@@ -154,17 +147,12 @@ export default function DocumentsPage() {
               No documents yet
             </div>
           )}
-        </main>
-
-        <Footer />
-      </div>
-
       <DocUploadModal
         open={docModal}
         defaultCategory="building"
         onClose={() => setDocModal(false)}
         onSubmit={submitDoc}
       />
-    </div>
+    </>
   );
 }

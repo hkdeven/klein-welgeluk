@@ -1,11 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { useToast } from "@/components/Toast";
-import { usePages } from "@/hooks/usePages";
+import EditBanner from "@/components/EditBanner";
+import { useEditMode } from "@/components/EditModeContext";
 
 const mockUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
@@ -66,9 +64,8 @@ const typeClass = (t: string) =>
     : "bg-[#EBD4D4] text-[#7A3B3B]";
 
 export default function CalendarPage() {
-  const { pages } = usePages();
   const toast = useToast();
-  const [editMode, setEditMode] = useState(false);
+  const { editMode } = useEditMode();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
   const [selectedFilter, setSelectedFilter] = useState("all");
@@ -416,19 +413,12 @@ export default function CalendarPage() {
   );
 
   return (
-    <div className="shell">
-      <Sidebar pages={pages} editMode={editMode} />
+    <>
+      <div className="title-block">
+        <h1>Calendar</h1>
+      </div>
 
-      <div className="flex-1">
-        <Topbar
-          user={mockUser}
-          editMode={editMode}
-          onEditModeChange={setEditMode}
-        />
-        <main>
-          <div className="title-block">
-            <h1>Calendar</h1>
-          </div>
+      {editMode && <EditBanner />}
 
           {/* Toolbar */}
           <div className="flex justify-between items-center mb-[18px] gap-4 flex-wrap">
@@ -680,10 +670,6 @@ export default function CalendarPage() {
               </div>
             </div>
           )}
-        </main>
-
-        <Footer />
-      </div>
-    </div>
+    </>
   );
 }

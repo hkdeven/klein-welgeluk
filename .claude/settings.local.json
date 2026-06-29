@@ -55,7 +55,9 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000)",
       "Bash(curl -s \"http://localhost:3000/api/activity\")",
       "Bash(perl -i -pe 's{<Sidebar pages=\\\\{pages\\\\} />}{<Sidebar pages={pages} editMode={editMode} />}g' src/app/page.tsx src/app/calendar/page.tsx \"src/app/[...slug]/page.tsx\" src/app/documents/page.tsx src/app/overview/page.tsx)",
-      "Bash(perl -i -pe 's{<Sidebar pages=\\\\{mockPages\\\\} />}{<Sidebar pages={mockPages} editMode={editMode} />}g' src/app/profile/page.tsx)"
+      "Bash(perl -i -pe 's{<Sidebar pages=\\\\{mockPages\\\\} />}{<Sidebar pages={mockPages} editMode={editMode} />}g' src/app/profile/page.tsx)",
+      "Bash(grep -n \"pages\\\\b\\\\|setEditMode\\\\|<div className=\\\\\"shell\\\\\"\\\\|<Sidebar\\\\|<Topbar\\\\|<main>\\\\|<Footer\\\\|</main>\\\\|</div>\\\\s*$\\\\|return \\(\" src/app/overview/page.tsx)",
+      "Bash(grep -n \"import Footer\\\\|import Sidebar\\\\|import Topbar\\\\|const { pages, loading\\\\|const \\\\[editMode\\\\|if \\(loading\\)\\\\|<div className=\\\\\"shell\\\\\"\\\\|<Sidebar\\\\|<Topbar\\\\|<main>\\\\|</main>\\\\|<Footer\\\\|return \\(\\\\|onEditModeChange\" src/app/page.tsx)"
     ]
   }
 }

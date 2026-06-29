@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import { useToast } from "@/components/Toast";
+import EditBanner from "@/components/EditBanner";
+import { useEditMode } from "@/components/EditModeContext";
 import { usePages } from "@/hooks/usePages";
 
 const storageUrl = (path: string) =>
@@ -33,7 +32,7 @@ const mockUser = {
 export default function HomePage() {
   const { pages, loading } = usePages();
   const toast = useToast();
-  const [editMode, setEditMode] = useState(false);
+  const { editMode } = useEditMode();
   const [assigned, setAssigned] = useState<any[]>([]);
   const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
   const [slides, setSlides] = useState<any[]>([]);
@@ -155,23 +154,11 @@ export default function HomePage() {
     setSlideIndex((i) => (slides.length ? (i + 1) % slides.length : 0));
 
   if (loading) {
-    return (
-      <div className="shell">
-        <Sidebar pages={pages} editMode={editMode} />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-sage">Loading...</p>
-        </div>
-      </div>
-    );
+    return <p className="text-sage">Loading...</p>;
   }
 
   return (
-    <div className="shell">
-      <Sidebar pages={pages} editMode={editMode} />
-
-      <div className="flex-1">
-        <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
-        <main>
+    <>
           {/* Photo carousel */}
           <div className="carousel">
             <div
@@ -253,6 +240,8 @@ export default function HomePage() {
             </div>
           </div>
 
+          {editMode && <EditBanner />}
+
           {/* Assigned to me */}
           <h2 className="section-h">Assigned to me</h2>
           {assigned.length > 0 ? (
@@ -289,34 +278,66 @@ export default function HomePage() {
           <h2 className="section-h">Recent activity</h2>
           <div className="home-card activity">
             {activity.length > 0 ? (
-              <ul>
-                {activity.map((a) => (
-                  <li key={a.id}>
-                    {a.who && <b>{a.who}</b>} {a.action}{" "}
-                    {a.slug ? (
-                      <a
-                        href={`/${a.slug}`}
-                        style={{ color: "var(--sage)", textDecoration: "underline" }}
+              <>
+                <ul>
+                  {activity.slice(0, activityShown).map((a) => (
+                    <li key={a.id} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                      <span style={{ flex: 1 }}>
+                        {a.who && <b>{a.who}</b>} {a.action}{" "}
+                        {a.slug ? (
+                          <a
+                            href={`/${a.slug}`}
+                            style={{ color: "var(--sage)", textDecoration: "underline" }}
+                          >
+                            {a.target}
+                          </a>
+                        ) : (
+                          <b>{a.target}</b>
+                        )}
+                        <span className="when">{timeAgo(a.when)}</span>
+                      </span>
+                      {isOwner && a.type !== "page" && (
+                        <span className="del-badge" onClick={() => deleteActivity(a)}>
+                          ✕
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {activity.length > 10 && (
+                  <div style={{ display: "flex", gap: 16, marginTop: 12 }}>
+                    {activityShown < activity.length && (
+                      <button
+                        onClick={() => setActivityShown((n) => n + 10)}
+                        className="text-sage text-[12px] underline hover:text-bottle"
                       >
-                        {a.target}
-                      </a>
-                    ) : (
-                      <b>{a.target}</b>
+                        Show 10 more
+                      </button>
                     )}
-                    <span className="when">{timeAgo(a.when)}</span>
-                  </li>
-                ))}
-              </ul>
+                    {activityShown < activity.length ? (
+                      <button
+                        onClick={() => setActivityShown(activity.length)}
+                        className="text-sage text-[12px] underline hover:text-bottle"
+                      >
+                        View all ({activity.length})
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setActivityShown(10)}
+                        className="text-sage text-[12px] underline hover:text-bottle"
+                      >
+                        Show less
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
             ) : (
               <p className="text-sage" style={{ fontSize: 13 }}>
                 No recent activity yet
               </p>
             )}
           </div>
-        </main>
-
-        <Footer />
-      </div>
-    </div>
+    </>
   );
 }

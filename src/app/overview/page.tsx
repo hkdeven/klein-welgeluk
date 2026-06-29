@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Footer from "@/components/Footer";
-import Sidebar from "@/components/Sidebar";
-import Topbar from "@/components/Topbar";
 import RichTextEditor from "@/components/RichTextEditor";
 import PageMedia from "@/components/PageMedia";
 import EditBanner from "@/components/EditBanner";
 import { useToast } from "@/components/Toast";
-import { usePages } from "@/hooks/usePages";
+import { useEditMode } from "@/components/EditModeContext";
 
 const mockUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
@@ -41,9 +38,8 @@ const TABS: { key: BriefTab; label: string; hint: string }[] = [
 ];
 
 export default function OverviewPage() {
-  const { pages } = usePages();
   const toast = useToast();
-  const [editMode, setEditMode] = useState(false);
+  const { editMode } = useEditMode();
 
   const isOwner = mockUser.role === "owner";
   const canEdit = isOwner && editMode;
@@ -122,19 +118,10 @@ export default function OverviewPage() {
     );
 
   return (
-    <div className="shell">
-      <Sidebar pages={pages} editMode={editMode} />
-
-      <div className="flex-1">
-        <Topbar
-          user={mockUser}
-          editMode={editMode}
-          onEditModeChange={setEditMode}
-        />
-        <main>
-          <div className="title-block">
-            <h1>Overview</h1>
-          </div>
+    <>
+      <div className="title-block">
+        <h1>Overview</h1>
+      </div>
 
           {editMode && <EditBanner />}
 
@@ -183,10 +170,6 @@ export default function OverviewPage() {
           )}
 
           <PageMedia pageId={pageId} user={mockUser} />
-        </main>
-
-        <Footer />
-      </div>
-    </div>
+    </>
   );
 }
