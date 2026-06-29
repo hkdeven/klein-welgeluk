@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
+import { useToast } from "@/components/Toast";
 import { usePages } from "@/hooks/usePages";
+
+const storageUrl = (path: string) =>
+  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
 
 const mockUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
@@ -15,122 +20,102 @@ const mockUser = {
 
 export default function HomePage() {
   const { pages, loading } = usePages();
+  const toast = useToast();
   const [editMode, setEditMode] = useState(false);
-  const [carouselIndex, setCarouselIndex] = useState(0);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [photos, setPhotos] = useState<any[]>([]);
-  const [photoCaption, setPhotoCaption] = useState("");
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [pageId, setPageId] = useState<string | null>(null);
+  const [assigned, setAssigned] = useState<any[]>([]);
+  const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
+  const [slides, setSlides] = useState<any[]>([]);
+  const [slideIndex, setSlideIndex] = useState(0);
 
-  const carouselImages = [
-    "https://via.placeholder.com/1180x400?text=Klein+Welgeluk",
-  ];
+  const isOwner = mockUser.role === "owner";
+  const canEdit = isOwner && editMode;
 
-  const prevSlide = () => {
-    setCarouselIndex(
-      (prev) => (prev - 1 + carouselImages.length) % carouselImages.length
-    );
-  };
-
-  const nextSlide = () => {
-    setCarouselIndex((prev) => (prev + 1) % carouselImages.length);
+  // Flatten pages so we can resolve a page's parent for the breadcrumb line.
+  const all: any[] = [];
+  pages.forEach((p) => {
+    all.push(p);
+    (p.children || []).forEach((c) => all.push(c));
+  });
+  const breadcrumbFor = (pageId: string) => {
+    const pg = all.find((p) => p.id === pageId);
+    if (!pg) return "";
+    const parent = pg.parent_id ? all.find((p) => p.id === pg.parent_id) : null;
+    return parent ? `${parent.title} / ${pg.title}` : pg.title;
   };
 
   useEffect(() => {
-    if (!pages.length) return;
-
-    // Use first page ID for comments/photos
-    const firstPageId = pages[0]?.id;
-    if (!firstPageId) return;
-
-    setPageId(firstPageId);
-
-    // Fetch comments
-    const fetchComments = async () => {
+    const load = async () => {
       try {
-        const res = await fetch(`/api/comments?page_id=${firstPageId}`);
+        const res = await fetch(`/api/assignments?user_id=${mockUser.id}`);
         const data = await res.json();
-        setComments(data.comments || []);
-      } catch (error) {
-        console.error("Failed to fetch comments:", error);
+        const list = data.assignments || [];
+        setAssigned(list);
+
+        // Pull tags for each assigned page so they can show on the card.
+        const entries = await Promise.all(
+          list
+            .filter((a: any) => a.page)
+            .map(async (a: any) => {
+              const t = await fetch(`/api/tags?page_id=${a.page.id}`).then((r) => r.json());
+              return [a.page.id, t.tags || []] as const;
+            })
+        );
+        setTagsByPage(Object.fromEntries(entries));
+      } catch {
+        /* ignore */
       }
     };
+    load();
+  }, []);
 
-    // Fetch photos
-    const fetchPhotos = async () => {
-      try {
-        const res = await fetch(`/api/photos?page_id=${firstPageId}`);
-        const data = await res.json();
-        setPhotos(data.photos || []);
-      } catch (error) {
-        console.error("Failed to fetch photos:", error);
-      }
-    };
+  useEffect(() => {
+    fetch("/api/carousel")
+      .then((r) => r.json())
+      .then((d) => setSlides(d.photos || []))
+      .catch(() => {});
+  }, []);
 
-    fetchComments();
-    fetchPhotos();
-  }, [pages]);
-
-  const handleAddComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newComment.trim() || !pageId) return;
+  const uploadSlide = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
     try {
-      const res = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page_id: pageId,
-          body: newComment,
-          author_id: mockUser.id,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add comment");
-      const comment = await res.json();
-      setComments([...comments, comment]);
-      setNewComment("");
-      alert("Comment added!");
-    } catch (error) {
-      alert("Error: " + (error as Error).message);
-    }
-  };
-
-  const handleAddPhoto = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!photoUrl.trim() || !pageId) return;
-    try {
-      const res = await fetch("/api/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page_id: pageId,
-          external_url: photoUrl,
-          caption: photoCaption,
-          category: "inspiration",
-          uploaded_by: mockUser.id,
-        }),
-      });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("uploaded_by", mockUser.id);
+      const res = await fetch("/api/carousel", { method: "POST", body: formData });
       if (!res.ok) throw new Error("Failed to add photo");
       const photo = await res.json();
-      setPhotos([...photos, photo]);
-      setPhotoUrl("");
-      setPhotoCaption("");
-      alert("Photo added!");
-    } catch (error) {
-      alert("Error: " + (error as Error).message);
+      setSlides([...slides, photo]);
+      setSlideIndex(slides.length);
+      e.target.value = "";
+      toast.success("Photo added to carousel");
+    } catch (err) {
+      toast.error((err as Error).message);
     }
   };
 
-  // Flatten pages for display
-  const allPages = pages
-    .flatMap((parent) => parent.children || [])
-    .filter((p) => p);
+  const deleteSlide = async (id: string) => {
+    try {
+      const res = await fetch(`/api/carousel/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete photo");
+      const next = slides.filter((s) => s.id !== id);
+      setSlides(next);
+      setSlideIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
+      toast.success("Photo removed");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const prevSlide = () =>
+    setSlideIndex((i) => (slides.length ? (i - 1 + slides.length) % slides.length : 0));
+  const nextSlide = () =>
+    setSlideIndex((i) => (slides.length ? (i + 1) % slides.length : 0));
 
   if (loading) {
     return (
       <div className="shell">
-        <Sidebar pages={pages} user={mockUser} editMode={editMode} />
+        <Sidebar pages={pages} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sage">Loading...</p>
         </div>
@@ -140,197 +125,130 @@ export default function HomePage() {
 
   return (
     <div className="shell">
-      <Sidebar
-        pages={pages}
-        user={mockUser}
-        editMode={editMode}
-        onEditModeChange={setEditMode}
-      />
+      <Sidebar pages={pages} />
 
       <div className="flex-1">
+        <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
         <main>
-          {/* Photo Carousel */}
-          <div className="relative w-full h-[400px] overflow-hidden rounded-md mb-7 bg-[#D6DCD3]">
-            <div className="flex h-full">
-              {carouselImages.map((img, idx) => (
-                <div
-                  key={idx}
-                  className="min-w-full h-full flex items-center justify-center bg-[#C4CCC0] text-sage relative"
-                  style={{
-                    transform: `translateX(-${carouselIndex * 100}%)`,
-                    transition: "transform 0.4s ease",
-                  }}
-                >
-                  <img
-                    src={img}
-                    alt={`Slide ${idx + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+          {/* Photo carousel */}
+          <div className="carousel">
+            <div
+              className="slides"
+              style={{ transform: `translateX(-${slideIndex * 100}%)` }}
+            >
+              {slides.length > 0 ? (
+                slides.map((s) => {
+                  const url = storageUrl(`photos/${s.storage_path}`);
+                  return (
+                    <div className="slide" key={s.id}>
+                      <a href={url} target="_blank" rel="noopener noreferrer">
+                        <img src={url} alt={s.caption || ""} />
+                      </a>
+                      {s.caption && <div className="caption">{s.caption}</div>}
+                      {canEdit && (
+                        <button
+                          onClick={() => deleteSlide(s.id)}
+                          style={{
+                            position: "absolute",
+                            bottom: 12,
+                            right: 12,
+                            background: "rgba(0,0,0,0.55)",
+                            color: "#fff",
+                            fontSize: 11,
+                            padding: "4px 10px",
+                            borderRadius: 3,
+                            border: "none",
+                            cursor: "pointer",
+                          }}
+                        >
+                          ✕ remove
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="slide">
+                  Klein Welgeluk
+                  <div className="caption">Greyton · build diary</div>
                 </div>
-              ))}
+              )}
             </div>
 
-            {mockUser.role === "owner" && (
-              <button className="absolute top-3 right-3 bg-[rgba(47,64,48,0.85)] text-white text-[11px] px-3 py-1 rounded">
-                + add photo
-              </button>
+            {slides.length > 1 && (
+              <>
+                <button className="arrow left" onClick={prevSlide}>
+                  ‹
+                </button>
+                <button className="arrow right" onClick={nextSlide}>
+                  ›
+                </button>
+                <div className="nav-dot">
+                  {slides.map((s, i) => (
+                    <span key={s.id} className={i === slideIndex ? "active" : ""} />
+                  ))}
+                </div>
+              </>
             )}
 
-            <button
-              onClick={prevSlide}
-              className="absolute top-1/2 left-3 -translate-y-1/2 w-8 h-8 rounded-full bg-[rgba(47,64,48,0.7)] text-white flex items-center justify-center"
-            >
-              ‹
-            </button>
-            <button
-              onClick={nextSlide}
-              className="absolute top-1/2 right-3 -translate-y-1/2 w-8 h-8 rounded-full bg-[rgba(47,64,48,0.7)] text-white flex items-center justify-center"
-            >
-              ›
-            </button>
-
-            <div className="flex gap-1 absolute bottom-3 left-1/2 -translate-x-1/2">
-              {carouselImages.map((_, idx) => (
-                <span
-                  key={idx}
-                  className={`w-2 h-2 rounded-full ${
-                    idx === carouselIndex
-                      ? "bg-white"
-                      : "bg-[rgba(255,255,255,0.45)]"
-                  }`}
-                />
-              ))}
-            </div>
+            {canEdit && (
+              <label className="add-slide" style={{ cursor: "pointer" }}>
+                + add photo
+                <input type="file" accept="image/*" onChange={uploadSlide} className="hidden" />
+              </label>
+            )}
           </div>
 
-          <div className="text-[10.5px] text-mist italic mb-5.5">
-            Only Deven and Wernardt can add photos here. Click any photo to view
-            full size.
-          </div>
+          <p className="carousel-note">
+            Only Deven and Wernardt can add photos here{isOwner ? " (turn on edit mode)" : ""}.
+            Click any photo to view full size.
+          </p>
 
-          {/* Title Block */}
           <div className="title-block">
             <div>
               <h1>Home</h1>
-              <div className="text-[12px] text-sage mt-1.5">
-                Welcome back, {mockUser.short_name}
-              </div>
+              <div className="title-meta">Welcome back, {mockUser.short_name}</div>
             </div>
           </div>
 
           {/* Assigned to me */}
-          <div className="mb-8">
-            <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
-              Assigned to me
-              <span className="flex-1 h-px bg-[#E5E1D3]"></span>
-            </h2>
-            <div className="bg-whitewash p-4 rounded text-center text-sage">
-              Nothing assigned to you right now
+          <h2 className="section-h">Assigned to me</h2>
+          {assigned.length > 0 ? (
+            <div className="sub-grid">
+              {assigned.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.page ? `/${a.page.slug}` : "#"}
+                  className="sub-card"
+                >
+                  <div className="name">{a.page?.title || "Page"}</div>
+                  {a.page && <div className="who">{breadcrumbFor(a.page.id)}</div>}
+                  {a.page && (tagsByPage[a.page.id]?.length ?? 0) > 0 && (
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+                      {tagsByPage[a.page.id].map((t: any) => (
+                        <span className="tag-chip" key={t.id}>
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </a>
+              ))}
             </div>
-          </div>
-
-          {/* Progress across project */}
-          <div className="mb-8">
-            <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
-              Progress across the project
-              <span className="flex-1 h-px bg-[#E5E1D3]"></span>
-            </h2>
-            {allPages.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3.5">
-                {allPages.map((page) => (
-                  <div
-                    key={page.id}
-                    className="border border-[#ECE8DC] rounded p-3.5 bg-whitewash"
-                  >
-                    <div className="font-fraunces text-base text-bottle font-medium mb-1.5">
-                      {page.title}
-                    </div>
-                    <div className="flex items-center gap-1.5 font-mono text-[10.5px] text-sage mb-1">
-                      <span>Present status:</span>
-                      <span className="text-brass font-semibold">Ideation</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="bg-whitewash p-4 rounded text-center text-sage">
-                No pages yet
-              </div>
-            )}
-          </div>
-
-          {/* Comments */}
-          <div className="mb-8">
-            <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
-              Comments
-              <span className="flex-1 h-px bg-[#E5E1D3]"></span>
-            </h2>
-            <div className="bg-white border border-[#ECE8DC] rounded p-5 mb-4">
-              {comments.length > 0 ? (
-                <div className="space-y-4">
-                  {comments.map((c: any) => (
-                    <div key={c.id} className="flex gap-3">
-                      <div className="w-8 h-8 rounded-full bg-bottle text-white text-xs flex items-center justify-center flex-shrink-0">
-                        {c.author?.short_name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-[12px] font-semibold text-bottle">
-                          {c.author?.short_name}
-                        </div>
-                        <div className="text-[13px] text-pine mt-1">{c.body}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sage text-[13px]">No comments yet</p>
-              )}
+          ) : (
+            <div className="home-card">
+              <p className="text-sage" style={{ fontSize: 13 }}>
+                Nothing assigned to you right now
+              </p>
             </div>
-            <form onSubmit={handleAddComment} className="flex gap-2">
-              <input
-                type="text"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="flex-1 border border-[#D7DECF] rounded p-2 text-[13px]"
-              />
-              <button
-                type="submit"
-                className="bg-bottle text-white px-4 py-2 rounded text-[13px] font-medium hover:opacity-90"
-              >
-                Post
-              </button>
-            </form>
-          </div>
+          )}
 
-          {/* Add Photo */}
-          <div className="mb-8">
-            <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
-              Add Photo
-              <span className="flex-1 h-px bg-[#E5E1D3]"></span>
-            </h2>
-            <form onSubmit={handleAddPhoto} className="space-y-3 bg-whitewash p-4 rounded">
-              <input
-                type="url"
-                value={photoUrl}
-                onChange={(e) => setPhotoUrl(e.target.value)}
-                placeholder="Photo URL"
-                className="w-full border border-[#D7DECF] rounded p-2 text-[13px]"
-              />
-              <input
-                type="text"
-                value={photoCaption}
-                onChange={(e) => setPhotoCaption(e.target.value)}
-                placeholder="Caption (optional)"
-                className="w-full border border-[#D7DECF] rounded p-2 text-[13px]"
-              />
-              <button
-                type="submit"
-                className="w-full bg-bottle text-white py-2 rounded text-[13px] font-medium hover:opacity-90"
-              >
-                + Add Photo
-              </button>
-            </form>
+          {/* Recent activity */}
+          <h2 className="section-h">Recent activity</h2>
+          <div className="home-card activity">
+            <p className="text-sage" style={{ fontSize: 13 }}>
+              No recent activity yet
+            </p>
           </div>
         </main>
 

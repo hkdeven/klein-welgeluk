@@ -139,6 +139,7 @@ CREATE TABLE documents (
   file_size BIGINT,
   file_type TEXT,
   caption TEXT,
+  category TEXT,
   uploaded_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMPTZ DEFAULT now()
 );

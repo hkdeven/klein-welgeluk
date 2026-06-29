@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface Page {
   id: string;
@@ -16,48 +16,49 @@ export function usePages() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchPages = async () => {
-      try {
-        const res = await fetch("/api/pages");
-        const data = await res.json();
+  const fetchPages = useCallback(async () => {
+    try {
+      const res = await fetch("/api/pages");
+      const data = await res.json();
 
-        if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error);
 
-        // Build tree structure
-        const pagesData = data.pages as Page[];
-        const pageMap = new Map<string, Page>();
-        const rootPages: Page[] = [];
+      // Build tree structure
+      const pagesData = data.pages as Page[];
+      const pageMap = new Map<string, Page>();
+      const rootPages: Page[] = [];
 
-        // First pass: create all pages
-        pagesData.forEach((page) => {
-          pageMap.set(page.id, { ...page, children: [] });
-        });
+      pagesData.forEach((page) => {
+        pageMap.set(page.id, { ...page, children: [] });
+      });
 
-        // Second pass: build tree
-        pagesData.forEach((page) => {
-          const pageNode = pageMap.get(page.id)!;
-          if (page.parent_id) {
-            const parent = pageMap.get(page.parent_id);
-            if (parent) {
-              parent.children = parent.children || [];
-              parent.children.push(pageNode);
-            }
+      pagesData.forEach((page) => {
+        const pageNode = pageMap.get(page.id)!;
+        if (page.parent_id) {
+          const parent = pageMap.get(page.parent_id);
+          if (parent) {
+            parent.children = parent.children || [];
+            parent.children.push(pageNode);
           } else {
             rootPages.push(pageNode);
           }
-        });
+        } else {
+          rootPages.push(pageNode);
+        }
+      });
 
-        setPages(rootPages);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch pages");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPages();
+      setPages(rootPages);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to fetch pages");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  return { pages, loading, error };
+  useEffect(() => {
+    fetchPages();
+  }, [fetchPages]);
+
+  return { pages, loading, error, refetch: fetchPages };
 }

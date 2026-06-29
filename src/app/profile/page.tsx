@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
+import Topbar from "@/components/Topbar";
 
 const mockPages = [
   {
@@ -32,14 +33,14 @@ export default function ProfilePage() {
 
   return (
     <div className="shell">
-      <Sidebar
-        pages={mockPages}
-        user={mockUser}
-        editMode={editMode}
-        onEditModeChange={setEditMode}
-      />
+      <Sidebar pages={mockPages} />
 
       <div className="flex-1">
+        <Topbar
+          user={mockUser}
+          editMode={editMode}
+          onEditModeChange={setEditMode}
+        />
         <main>
           <div className="title-block">
             <h1>Your profile</h1>

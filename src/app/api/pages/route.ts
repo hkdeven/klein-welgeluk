@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -19,19 +21,16 @@ export async function GET(request: NextRequest) {
 
     const { data: pages, error } = await supabase
       .from("pages")
-      .select("*")
-      .order("sort_order", { ascending: true });
+      .select("*");
 
     if (error) throw error;
 
-    return NextResponse.json({
-      pages: pages || [],
-      total: pages?.length || 0,
-    });
+    return NextResponse.json({ pages: pages || [] });
   } catch (error) {
-    console.error("Pages fetch error:", error);
+    const msg = (error as Error).message;
+    console.error("Pages fetch error:", msg);
     return NextResponse.json(
-      { error: "Failed to fetch pages" },
+      { error: `Fetch error: ${msg}` },
       { status: 500 }
     );
   }
@@ -46,16 +45,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, parent_id, brief } = await request.json();
+    const { title, slug, parent_id, description } = await request.json();
 
-    if (!title) {
+    if (!title || !slug) {
       return NextResponse.json(
-        { error: "Title is required" },
+        { error: "title and slug are required" },
         { status: 400 }
       );
     }
-
-    const slug = title.toLowerCase().replace(/\s+/g, "-");
 
     const { data: newPage, error } = await supabase
       .from("pages")
@@ -64,7 +61,6 @@ export async function POST(request: NextRequest) {
           title,
           slug,
           parent_id: parent_id || null,
-          brief: brief || "",
         },
       ])
       .select()
@@ -74,9 +70,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newPage, { status: 201 });
   } catch (error) {
-    console.error("Pages create error:", error);
+    const msg = (error as Error).message;
+    console.error("Page create error:", msg);
     return NextResponse.json(
-      { error: "Failed to create page" },
+      { error: `Create error: ${msg}` },
       { status: 500 }
     );
   }

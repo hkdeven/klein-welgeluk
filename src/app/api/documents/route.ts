@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const dynamic = "force-dynamic";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -80,6 +82,7 @@ export async function POST(request: NextRequest) {
     const page_id = formData.get("page_id") as string;
     const caption = formData.get("caption") as string;
     const user_id = formData.get("user_id") as string;
+    const category = formData.get("category") as string | null;
 
     if (!file || !page_id) {
       return NextResponse.json(
@@ -102,25 +105,37 @@ export async function POST(request: NextRequest) {
     if (uploadError) throw uploadError;
 
     // Create document record in database
-    const { data: newDocument, error: dbError } = await supabase
+    const record: Record<string, unknown> = {
+      page_id,
+      filename: file.name,
+      storage_path: filePath,
+      file_size: file.size,
+      file_type: file.name.split(".").pop() || "file",
+      caption: caption || "",
+      uploaded_by: user_id,
+    };
+    if (category) record.category = category;
+
+    let result = await supabase
       .from("documents")
-      .insert([
-        {
-          page_id,
-          filename: file.name,
-          storage_path: filePath,
-          file_size: file.size,
-          file_type: file.name.split(".").pop() || "file",
-          caption: caption || "",
-          uploaded_by: user_id,
-        },
-      ])
+      .insert([record])
       .select()
       .single();
 
-    if (dbError) throw dbError;
+    // If the optional `category` column hasn't been added to this database yet,
+    // retry the insert without it so uploads still succeed.
+    if (result.error && category) {
+      const { category: _omit, ...withoutCategory } = record;
+      result = await supabase
+        .from("documents")
+        .insert([withoutCategory])
+        .select()
+        .single();
+    }
 
-    return NextResponse.json(newDocument, { status: 201 });
+    if (result.error) throw result.error;
+
+    return NextResponse.json(result.data, { status: 201 });
   } catch (error) {
     const msg = (error as Error).message;
     console.error("Document upload error:", msg);
