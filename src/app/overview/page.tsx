@@ -5,7 +5,8 @@ import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import RichTextEditor from "@/components/RichTextEditor";
-import PageAttachments from "@/components/PageAttachments";
+import PageMedia from "@/components/PageMedia";
+import EditBanner from "@/components/EditBanner";
 import { useToast } from "@/components/Toast";
 import { usePages } from "@/hooks/usePages";
 
@@ -122,7 +123,7 @@ export default function OverviewPage() {
 
   return (
     <div className="shell">
-      <Sidebar pages={pages} />
+      <Sidebar pages={pages} editMode={editMode} />
 
       <div className="flex-1">
         <Topbar
@@ -134,6 +135,8 @@ export default function OverviewPage() {
           <div className="title-block">
             <h1>Overview</h1>
           </div>
+
+          {editMode && <EditBanner />}
 
           {/* Project scope */}
           <div className="mb-8">
@@ -179,7 +182,7 @@ export default function OverviewPage() {
             </button>
           )}
 
-          <PageAttachments pageId={pageId} user={mockUser} />
+          <PageMedia pageId={pageId} user={mockUser} />
         </main>
 
         <Footer />

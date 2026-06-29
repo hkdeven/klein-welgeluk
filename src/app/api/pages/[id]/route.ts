@@ -72,17 +72,32 @@ export async function DELETE(
 
     const { id } = params;
 
-    await supabase
+    // Collect the whole subtree (any depth) and delete deepest-first so the
+    // self-referential parent_id foreign key is never violated. Per-page
+    // content (comments, photos, documents, costing, tags, assignments)
+    // cascades automatically via its own ON DELETE CASCADE.
+    const { data: allPages, error: fetchError } = await supabase
       .from("pages")
-      .delete()
-      .eq("parent_id", id);
+      .select("id, parent_id");
+    if (fetchError) throw fetchError;
 
-    const { error } = await supabase
-      .from("pages")
-      .delete()
-      .eq("id", id);
+    const childrenOf: Record<string, string[]> = {};
+    (allPages || []).forEach((p) => {
+      if (p.parent_id) (childrenOf[p.parent_id] ||= []).push(p.id);
+    });
 
-    if (error) throw error;
+    const subtree: { id: string; depth: number }[] = [];
+    const walk = (nodeId: string, depth: number) => {
+      subtree.push({ id: nodeId, depth });
+      (childrenOf[nodeId] || []).forEach((c) => walk(c, depth + 1));
+    };
+    walk(id, 0);
+    subtree.sort((a, b) => b.depth - a.depth);
+
+    for (const node of subtree) {
+      const { error } = await supabase.from("pages").delete().eq("id", node.id);
+      if (error) throw error;
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

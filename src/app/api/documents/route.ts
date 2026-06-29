@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("documents")
-      .select("*")
+      .select("*, uploader:uploaded_by(short_name)")
       .order("created_at", { ascending: false });
 
     if (page_id) {
@@ -91,8 +91,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload file to Supabase Storage
-    const fileName = `${Date.now()}_${file.name}`;
+    // Upload file to Supabase Storage (sanitize name — keys can't contain spaces/etc.)
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
     const filePath = `documents/${page_id}/${fileName}`;
 
     const fileBuffer = await file.arrayBuffer();

@@ -33,7 +33,7 @@ export default function ProfilePage() {
 
   return (
     <div className="shell">
-      <Sidebar pages={mockPages} />
+      <Sidebar pages={mockPages} editMode={editMode} />
 
       <div className="flex-1">
         <Topbar

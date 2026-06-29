@@ -6,6 +6,9 @@ import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import RichTextEditor from "@/components/RichTextEditor";
+import EditBanner from "@/components/EditBanner";
+import PageMedia from "@/components/PageMedia";
+import { DOC_CATEGORIES } from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
 import { usePages, type Page } from "@/hooks/usePages";
 
@@ -17,9 +20,6 @@ const mockUser = {
   avatar_url: null,
 };
 
-const storageUrl = (path: string) =>
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
-
 export default function DynamicPage() {
   const { pages, loading } = usePages();
   const toast = useToast();
@@ -28,11 +28,9 @@ export default function DynamicPage() {
   const slug = decodeURIComponent((pathname || "").replace(/^\//, ""));
 
   const isOwner = mockUser.role === "owner";
-  // Editing affordances (assignees, tags, descriptions, costing) only show when
-  // an owner has turned on edit mode.
   const canEdit = isOwner && editMode;
 
-  // Flatten the full tree (any depth) so nested pages resolve, not just children.
+  // Flatten the full tree (any depth) so nested pages resolve.
   const all: Page[] = [];
   const collect = (list: Page[]) =>
     list.forEach((p) => {
@@ -45,17 +43,21 @@ export default function DynamicPage() {
   const children = page?.children || [];
   const pageId = page?.id ?? null;
 
+  // Top-level ancestor → default document category for this page.
+  const rootOf = (p: Page): Page => {
+    let cur = p;
+    while (cur.parent_id) {
+      const par = all.find((x) => x.id === cur.parent_id);
+      if (!par) break;
+      cur = par;
+    }
+    return cur;
+  };
+  const rootSlug = page ? rootOf(page).slug : "";
+  const defaultCategory = DOC_CATEGORIES.includes(rootSlug) ? rootSlug : "building";
+
   const [brief, setBrief] = useState("");
   const [savingBrief, setSavingBrief] = useState(false);
-  const [comments, setComments] = useState<any[]>([]);
-  const [newComment, setNewComment] = useState("");
-  const [photos, setPhotos] = useState<any[]>([]);
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [photoCaption, setPhotoCaption] = useState("");
-  const [showLink, setShowLink] = useState(false);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [docCaption, setDocCaption] = useState("");
-  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [costing, setCosting] = useState({
     budgeted_amount: "",
     quote_received: "",
@@ -78,19 +80,13 @@ export default function DynamicPage() {
     let active = true;
     (async () => {
       try {
-        const [c, p, d, cost, a, t, u] = await Promise.all([
-          fetch(`/api/comments?page_id=${pageId}`).then((r) => r.json()),
-          fetch(`/api/photos?page_id=${pageId}`).then((r) => r.json()),
-          fetch(`/api/documents?page_id=${pageId}`).then((r) => r.json()),
+        const [cost, a, t, u] = await Promise.all([
           fetch(`/api/costing?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/assignments?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/tags?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/users`).then((r) => r.json()),
         ]);
         if (!active) return;
-        setComments(c.comments || []);
-        setPhotos(p.photos || []);
-        setDocuments(d.documents || []);
         setAssignments(a.assignments || []);
         setTags(t.tags || []);
         setUsers(u.users || []);
@@ -207,130 +203,12 @@ export default function DynamicPage() {
     }
   };
 
-  const addComment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pageId || !newComment.replace(/<[^>]*>/g, "").trim()) return;
-    try {
-      const res = await fetch("/api/comments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: pageId, body: newComment, author_id: mockUser.id }),
-      });
-      if (!res.ok) throw new Error("Failed to add comment");
-      setComments([...comments, await res.json()]);
-      setNewComment("");
-      toast.success("Comment added");
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const deleteComment = async (id: string) => {
-    try {
-      const res = await fetch(`/api/comments/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete comment");
-      setComments(comments.filter((c) => c.id !== id));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const uploadPhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !pageId) return;
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("page_id", pageId);
-      formData.append("uploaded_by", mockUser.id);
-      formData.append("caption", photoCaption);
-      const res = await fetch("/api/photos/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to upload photo");
-      setPhotos([...photos, await res.json()]);
-      setPhotoCaption("");
-      e.target.value = "";
-      toast.success("Photo uploaded");
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const addPhotoLink = async () => {
-    if (!pageId || !photoUrl.trim()) return;
-    try {
-      const res = await fetch("/api/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page_id: pageId,
-          external_url: photoUrl,
-          caption: photoCaption,
-          category: "inspiration",
-          uploaded_by: mockUser.id,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add photo");
-      setPhotos([...photos, await res.json()]);
-      setPhotoUrl("");
-      setPhotoCaption("");
-      setShowLink(false);
-      toast.success("Photo added");
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const deletePhoto = async (id: string) => {
-    try {
-      const res = await fetch(`/api/photos/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete photo");
-      setPhotos(photos.filter((p) => p.id !== id));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const uploadDocument = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !pageId) return;
-    setUploadingDoc(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("page_id", pageId);
-      formData.append("user_id", mockUser.id);
-      formData.append("caption", docCaption);
-      const res = await fetch("/api/documents", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to upload document");
-      setDocuments([...documents, await res.json()]);
-      setDocCaption("");
-      e.target.value = "";
-      toast.success("Document uploaded");
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setUploadingDoc(false);
-    }
-  };
-
-  const deleteDocument = async (id: string) => {
-    try {
-      const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete document");
-      setDocuments(documents.filter((d) => d.id !== id));
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
   const assignedIds = assignments.map((a) => a.user_id);
   const availableUsers = users.filter((u) => !assignedIds.includes(u.id));
-  // Sub-pages are created from the sidebar now; only list them here when they exist.
-  const showSubPages = children.length > 0;
 
   return (
     <div className="shell">
-      <Sidebar pages={pages} />
+      <Sidebar pages={pages} editMode={editMode} />
 
       <div className="flex-1">
         <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
@@ -360,13 +238,11 @@ export default function DynamicPage() {
                   <h1>{page.title}</h1>
                   <div className="title-meta">
                     {children.length} sub-page{children.length === 1 ? "" : "s"}
-                    <span className="dot">·</span>
-                    <a href="#comments">
-                      {comments.length} comment{comments.length === 1 ? "" : "s"}
-                    </a>
                   </div>
                 </div>
               </div>
+
+              {editMode && <EditBanner />}
 
               {/* Assigned + Tags */}
               <div className="meta-row">
@@ -534,108 +410,8 @@ export default function DynamicPage() {
                 )}
               </div>
 
-              {/* Documents */}
-              <h2 className="section-h">Documents</h2>
-              {documents.map((doc: any) => (
-                <div className="doc-row" key={doc.id}>
-                  <div className="ic">{doc.file_type?.toUpperCase()?.slice(0, 3) || "DOC"}</div>
-                  <div className="meta">
-                    <b>
-                      <a
-                        href={storageUrl(`documents/${doc.storage_path}`)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {doc.filename}
-                      </a>
-                    </b>
-                    {doc.caption && <span className="caption-text">{doc.caption}</span>}
-                  </div>
-                  <div className="right">
-                    {(doc.file_size / 1024 / 1024).toFixed(1)} MB
-                    <div>
-                      <button
-                        onClick={() => deleteDocument(doc.id)}
-                        className="add-link"
-                        style={{ background: "none", border: "none", cursor: "pointer" }}
-                      >
-                        delete
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 4 }}>
-                <input
-                  value={docCaption}
-                  onChange={(e) => setDocCaption(e.target.value)}
-                  placeholder="Document description (optional)"
-                  className="field-input"
-                  style={{ marginBottom: 0, flex: 1 }}
-                />
-                <label className="post-btn" style={{ whiteSpace: "nowrap" }}>
-                  {uploadingDoc ? "Uploading..." : "+ upload document"}
-                  <input type="file" onChange={uploadDocument} className="hidden" />
-                </label>
-              </div>
-
-              {/* Photo gallery */}
-              <h2 className="section-h">Photo gallery</h2>
-              <div className="gallery-bar">
-                <input
-                  value={photoCaption}
-                  onChange={(e) => setPhotoCaption(e.target.value)}
-                  placeholder="Photo description (optional)"
-                  className="field-input"
-                  style={{ marginBottom: 0, maxWidth: 320 }}
-                />
-                <div className="gallery-actions">
-                  <label style={{ cursor: "pointer" }}>
-                    + Upload
-                    <input type="file" accept="image/*" onChange={uploadPhotoFile} className="hidden" />
-                  </label>
-                  <span style={{ cursor: "pointer" }} onClick={() => setShowLink((s) => !s)}>
-                    + Add via link
-                  </span>
-                </div>
-              </div>
-              {showLink && (
-                <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                  <input
-                    type="url"
-                    value={photoUrl}
-                    onChange={(e) => setPhotoUrl(e.target.value)}
-                    placeholder="Image URL"
-                    className="field-input"
-                    style={{ marginBottom: 0 }}
-                  />
-                  <button className="post-btn" onClick={addPhotoLink}>
-                    Add
-                  </button>
-                </div>
-              )}
-              <div className="masonry">
-                {photos.map((p: any) => {
-                  const url = p.external_url || storageUrl(`photos/${p.storage_path}`);
-                  return (
-                    <div className="pin" key={p.id}>
-                      <img src={url} alt={p.caption || ""} />
-                      {p.category && <span className="tag">{p.category}</span>}
-                      <button className="del" onClick={() => deletePhoto(p.id)}>
-                        delete
-                      </button>
-                      {p.caption && <div className="caption">{p.caption}</div>}
-                    </div>
-                  );
-                })}
-                <label className="pin add">
-                  + add image
-                  <input type="file" accept="image/*" onChange={uploadPhotoFile} className="hidden" />
-                </label>
-              </div>
-
-              {/* Sub-pages — only when there are children (or in edit mode) */}
-              {showSubPages && (
+              {/* Sub-pages — only when there are children */}
+              {children.length > 0 && (
                 <>
                   <h2 className="section-h">Sub-pages</h2>
                   <div className="sub-list">
@@ -654,35 +430,8 @@ export default function DynamicPage() {
                 </>
               )}
 
-              {/* Comments */}
-              <h2 className="section-h" id="comments">
-                Comments
-              </h2>
-              {comments.map((c: any) => (
-                <div className="comment" key={c.id}>
-                  <div className="av">{c.author?.short_name?.charAt(0).toUpperCase() || "?"}</div>
-                  <div className="comment-card">
-                    <div className="who">
-                      {c.author?.short_name || "Unknown"}
-                      <button className="del" onClick={() => deleteComment(c.id)}>
-                        delete
-                      </button>
-                    </div>
-                    <div className="txt rich-text" dangerouslySetInnerHTML={{ __html: c.body }} />
-                  </div>
-                </div>
-              ))}
-              <form onSubmit={addComment} style={{ marginTop: 6 }}>
-                <RichTextEditor
-                  value={newComment}
-                  onChange={setNewComment}
-                  placeholder="Add a comment..."
-                  minHeight={70}
-                />
-                <button type="submit" className="post-btn" style={{ marginTop: 10 }}>
-                  Post
-                </button>
-              </form>
+              {/* Documents, Photos, Comments (shared with Overview) */}
+              <PageMedia pageId={pageId} user={mockUser} defaultCategory={defaultCategory} />
             </>
           )}
         </main>

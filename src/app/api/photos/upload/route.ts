@@ -32,7 +32,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fileName = `${Date.now()}_${file.name}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const fileName = `${Date.now()}_${safeName}`;
     const filePath = `photos/${page_id}/${fileName}`;
 
     const fileBuffer = await file.arrayBuffer();

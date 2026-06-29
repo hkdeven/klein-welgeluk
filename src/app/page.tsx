@@ -10,6 +10,18 @@ import { usePages } from "@/hooks/usePages";
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
 
+function timeAgo(iso: string) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} hr${h > 1 ? "s" : ""} ago`;
+  const d = Math.floor(h / 24);
+  if (d < 7) return `${d} day${d > 1 ? "s" : ""} ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
 const mockUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
   display_name: "Deven Blackburn",
@@ -25,6 +37,29 @@ export default function HomePage() {
   const [assigned, setAssigned] = useState<any[]>([]);
   const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
   const [slides, setSlides] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [activityShown, setActivityShown] = useState(10);
+
+  const ACTIVITY_ENDPOINT: Record<string, string> = {
+    comment: "comments",
+    photo: "photos",
+    document: "documents",
+    event: "calendar",
+  };
+
+  const deleteActivity = async (item: any) => {
+    const ep = ACTIVITY_ENDPOINT[item.type];
+    if (!ep) return; // page-creation items aren't removable from the feed
+    if (!confirm(`Remove this activity? This deletes the underlying ${item.type}.`)) return;
+    try {
+      const res = await fetch(`/api/${ep}/${item.refId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove");
+      setActivity((prev) => prev.filter((a) => a.id !== item.id));
+      toast.success("Activity removed");
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
   const [slideIndex, setSlideIndex] = useState(0);
 
   const isOwner = mockUser.role === "owner";
@@ -75,6 +110,13 @@ export default function HomePage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch("/api/activity")
+      .then((r) => r.json())
+      .then((d) => setActivity(d.activity || []))
+      .catch(() => {});
+  }, []);
+
   const uploadSlide = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -115,7 +157,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="shell">
-        <Sidebar pages={pages} />
+        <Sidebar pages={pages} editMode={editMode} />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sage">Loading...</p>
         </div>
@@ -125,7 +167,7 @@ export default function HomePage() {
 
   return (
     <div className="shell">
-      <Sidebar pages={pages} />
+      <Sidebar pages={pages} editMode={editMode} />
 
       <div className="flex-1">
         <Topbar user={mockUser} editMode={editMode} onEditModeChange={setEditMode} />
@@ -246,9 +288,30 @@ export default function HomePage() {
           {/* Recent activity */}
           <h2 className="section-h">Recent activity</h2>
           <div className="home-card activity">
-            <p className="text-sage" style={{ fontSize: 13 }}>
-              No recent activity yet
-            </p>
+            {activity.length > 0 ? (
+              <ul>
+                {activity.map((a) => (
+                  <li key={a.id}>
+                    {a.who && <b>{a.who}</b>} {a.action}{" "}
+                    {a.slug ? (
+                      <a
+                        href={`/${a.slug}`}
+                        style={{ color: "var(--sage)", textDecoration: "underline" }}
+                      >
+                        {a.target}
+                      </a>
+                    ) : (
+                      <b>{a.target}</b>
+                    )}
+                    <span className="when">{timeAgo(a.when)}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sage" style={{ fontSize: 13 }}>
+                No recent activity yet
+              </p>
+            )}
           </div>
         </main>
 

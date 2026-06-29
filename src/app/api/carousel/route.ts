@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const key = `carousel/${Date.now()}_${file.name}`;
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const key = `carousel/${Date.now()}_${safeName}`;
     const buffer = await file.arrayBuffer();
     const { error: uploadError } = await supabase.storage
       .from("photos")

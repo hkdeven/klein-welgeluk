@@ -417,7 +417,7 @@ export default function CalendarPage() {
 
   return (
     <div className="shell">
-      <Sidebar pages={pages} />
+      <Sidebar pages={pages} editMode={editMode} />
 
       <div className="flex-1">
         <Topbar
