@@ -733,3 +733,48 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 .modal-card select, .modal-card input[type="text"] {
   width: 100%; border: 1px solid #D7DECF; border-radius: 4px; padding: 8px 10px; font-size: 13px; color: var(--pine);
 }
+
+/* ===== Mobile (phones only — not tablet) ===== */
+.mobile-menu-btn { display: none; }
+.nav-backdrop { display: none; }
+
+@media (max-width: 640px) {
+  .shell { grid-template-columns: 1fr; max-width: 100%; box-shadow: none; }
+
+  /* Sidebar becomes an off-canvas drawer */
+  .ledger {
+    position: fixed; top: 0; left: 0;
+    width: 240px; height: 100vh; height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    z-index: 60;
+  }
+  .nav-open .ledger { transform: translateX(0); }
+  .nav-backdrop {
+    display: block; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.4); z-index: 55;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--bottle);
+    font-size: 22px; line-height: 1; cursor: pointer; padding: 0 4px; margin-right: 4px;
+  }
+
+  .topbar { padding: 12px 16px 10px; }
+  main { padding: 14px 16px 50px; }
+  .title-block h1 { font-size: 26px; }
+  .masonry { column-count: 2; }
+
+  /* Hero carousel: take the photo's natural height (no fixed box, no crop/stretch).
+     Drop the desktop full-bleed negative margins so it doesn't overflow. */
+  .carousel { width: 100%; margin: 0 0 20px; height: auto; }
+  .carousel .slides { align-items: flex-start; }
+  .carousel .slide { height: auto; }
+  .carousel .slide img { height: auto; object-fit: contain; }
+  .carousel-note { margin: 0 0 20px; }
+
+  /* Login */
+  .login-page { padding: 18px 14px; }
+  .login-card { padding: 0 20px 22px; }
+}

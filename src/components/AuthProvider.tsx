@@ -42,6 +42,7 @@ interface AuthValue {
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
   enterGuest: () => void;
   signOut: () => void;
+  updateUser: (patch: Partial<AppUser>) => void;
 }
 
 const AuthContext = createContext<AuthValue>({
@@ -56,6 +57,7 @@ const AuthContext = createContext<AuthValue>({
   signInWithEmail: async () => ({}),
   enterGuest: () => {},
   signOut: () => {},
+  updateUser: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -152,6 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsGuest(false);
   };
 
+  // Patch the in-memory user (e.g. after an avatar change) so the UI updates
+  // everywhere without a full page reload.
+  const updateUser = (patch: Partial<AppUser>) =>
+    setAppUser((prev) => (prev ? { ...prev, ...patch } : prev));
+
   const user = signedIn && appUser ? appUser : isGuest ? GUEST_USER : FALLBACK_USER;
 
   return (
@@ -168,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithEmail,
         enterGuest,
         signOut,
+        updateUser,
       }}
     >
       {children}

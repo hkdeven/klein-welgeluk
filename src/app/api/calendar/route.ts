@@ -23,6 +23,26 @@ export async function GET(request: NextRequest) {
     const start_date = searchParams.get("start_date");
     const end_date = searchParams.get("end_date");
     const event_type = searchParams.get("event_type");
+    const upcoming_for = searchParams.get("upcoming_for");
+
+    // Events a given user is tagged in, happening within the next 7 days.
+    if (upcoming_for) {
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+      const weekStr = new Date(today.getTime() + 7 * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .contains("tagged_user_ids", [upcoming_for])
+        .gte("event_date", todayStr)
+        .lte("event_date", weekStr)
+        .order("event_date", { ascending: true })
+        .order("event_time", { ascending: true });
+      if (error) throw error;
+      return NextResponse.json({ events: data || [] });
+    }
 
     let query = supabase
       .from("calendar_events")
@@ -76,6 +96,7 @@ export async function POST(request: NextRequest) {
       description,
       page_id,
       created_by,
+      tagged_user_ids,
     } = await request.json();
 
     if (!title || !event_date || !event_type) {
@@ -92,20 +113,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const row: Record<string, unknown> = {
+      title,
+      event_date,
+      event_time: event_time || null,
+      end_date: end_date || null,
+      event_type,
+      description: description || "",
+      page_id: page_id || null,
+      created_by,
+    };
+    // Only send tags when present so untagged inserts still work if the
+    // tagged_user_ids column hasn't been added yet.
+    if (Array.isArray(tagged_user_ids) && tagged_user_ids.length) {
+      row.tagged_user_ids = tagged_user_ids;
+    }
+
     const { data: newEvent, error } = await supabase
       .from("calendar_events")
-      .insert([
-        {
-          title,
-          event_date,
-          event_time: event_time || null,
-          end_date: end_date || null,
-          event_type,
-          description: description || "",
-          page_id: page_id || null,
-          created_by,
-        },
-      ])
+      .insert([row])
       .select()
       .single();
 

@@ -8,7 +8,7 @@ import ProfilePhotoCropper from "@/components/ProfilePhotoCropper";
 
 export default function ProfilePage() {
   const mockUser = useCurrentUser();
-  const { signedIn, signOut } = useAuth();
+  const { signedIn, signOut, updateUser } = useAuth();
   const toast = useToast();
   const isOwner = mockUser.role === "owner";
   const [guestPass, setGuestPass] = useState("");
@@ -123,16 +123,18 @@ export default function ProfilePage() {
       const file = new File([blob], `avatar_${Date.now()}.jpg`, { type: "image/jpeg" });
       const path = `avatars/${mockUser.id}_${Date.now()}.jpg`;
       await uploadToStorage("photos", path, file);
+      const url = publicUrl("photos", path);
       const res = await fetch(`/api/users/${mockUser.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ avatar_url: publicUrl("photos", path) }),
+        body: JSON.stringify({ avatar_url: url }),
       });
       if (!res.ok) throw new Error("Failed to save photo");
+      updateUser({ avatar_url: url });
       toast.success("Photo updated");
-      window.location.reload();
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
       setAvatarBusy(false);
       setCropFile(null);
     }
@@ -147,9 +149,11 @@ export default function ProfilePage() {
         body: JSON.stringify({ avatar_url: "" }),
       });
       if (!res.ok) throw new Error("Failed to remove photo");
-      window.location.reload();
+      updateUser({ avatar_url: "" });
+      toast.success("Photo removed");
     } catch (err) {
       toast.error((err as Error).message);
+    } finally {
       setAvatarBusy(false);
     }
   };

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 interface Page {
@@ -18,6 +18,8 @@ interface SidebarProps {
   canCreate?: boolean;
   // Delete controls only appear when the current page is in edit mode.
   editMode?: boolean;
+  // Refresh the page tree in place (no full reload) after create/delete.
+  refetch?: () => void | Promise<void>;
 }
 
 const slugify = (text: string) =>
@@ -81,8 +83,9 @@ function NavIcon({ name }: { name: string }) {
   }
 }
 
-export default function Sidebar({ pages, canCreate = true, editMode = false }: SidebarProps) {
+export default function Sidebar({ pages, canCreate = true, editMode = false, refetch }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const activeSlug = decodeURIComponent((pathname || "").replace(/^\//, ""));
   const isActive = (slug: string) => activeSlug === slug;
 
@@ -124,7 +127,13 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: addTitle, slug, parent_id: addParentId || null }),
       });
-      if (res.ok) window.location.href = `/${slug}`;
+      if (res.ok) {
+        setShowAdd(false);
+        setAddTitle("");
+        setAddParentId("");
+        await refetch?.();
+        router.push(`/${slug}`);
+      }
     } catch {
       /* ignore */
     }
@@ -141,8 +150,10 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
     try {
       const res = await fetch(`/api/pages/${node.id}`, { method: "DELETE" });
       if (!res.ok) return;
-      // If we're viewing the deleted page (or a descendant), go home; else refresh the tree.
-      window.location.href = onPath(node) ? "/" : window.location.pathname;
+      // If we're viewing the deleted page (or a descendant), go home; either way
+      // refresh the tree in place rather than reloading the whole app.
+      if (onPath(node)) router.push("/");
+      await refetch?.();
     } catch {
       /* ignore */
     }
@@ -233,7 +244,13 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
                   : "text-[rgba(250,249,245,0.82)]"
               }`}
             >
-              <NavIcon name={l.name} />
+              {l.name === "overview" ? (
+                <span style={{ width: 17, textAlign: "center", fontSize: 15, flex: "0 0 auto" }}>
+                  ✦
+                </span>
+              ) : (
+                <NavIcon name={l.name} />
+              )}
               {l.text}
             </Link>
           ))}

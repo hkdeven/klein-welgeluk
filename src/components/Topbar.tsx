@@ -9,16 +9,26 @@ interface TopbarProps {
   };
   editMode?: boolean;
   onEditModeChange?: (enabled: boolean) => void;
+  onMenuClick?: () => void;
 }
 
 export default function Topbar({
   user,
   editMode = false,
   onEditModeChange,
+  onMenuClick,
 }: TopbarProps) {
   return (
     <div className="topbar sticky top-0 z-40 bg-white border-b border-[#ECE8DC]">
-      <div className="text-[12px] text-sage"></div>
+      {/* Always-present left slot so justify-between keeps controls on the right;
+          the hamburger inside is only visible on mobile. */}
+      <div className="flex items-center">
+        {onMenuClick && (
+          <button className="mobile-menu-btn" onClick={onMenuClick} aria-label="Menu">
+            ☰
+          </button>
+        )}
+      </div>
       <div className="flex items-center gap-[14px]">
         {onEditModeChange && (
           <button

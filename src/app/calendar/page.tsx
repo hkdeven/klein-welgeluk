@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
+import EventDetailModal from "@/components/EventDetailModal";
 import { useEditMode } from "@/components/EditModeContext";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 
@@ -67,13 +68,16 @@ export default function CalendarPage() {
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     event_date: "",
     event_time: "",
     event_type: "meeting",
     description: "",
+    tagged_user_ids: [] as string[],
   });
 
   const year = currentDate.getFullYear();
@@ -91,6 +95,21 @@ export default function CalendarPage() {
     };
     fetchEvents();
   }, []);
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((d) => setUsers(d.users || []))
+      .catch(() => {});
+  }, []);
+
+  const toggleTagged = (id: string) =>
+    setFormData((f) => ({
+      ...f,
+      tagged_user_ids: f.tagged_user_ids.includes(id)
+        ? f.tagged_user_ids.filter((x) => x !== id)
+        : [...f.tagged_user_ids, id],
+    }));
 
   const matchesFilter = (event: any) => {
     if (selectedFilter === "all") return true;
@@ -149,29 +168,60 @@ export default function CalendarPage() {
     return `${year}`;
   };
 
-  const handleAddEvent = async (e: React.FormEvent) => {
+  const blankForm = {
+    title: "",
+    event_date: "",
+    event_time: "",
+    event_type: "meeting",
+    description: "",
+    tagged_user_ids: [] as string[],
+  };
+
+  const openAddEvent = () => {
+    setEditingId(null);
+    setFormData(blankForm);
+    setShowAddEvent(true);
+  };
+
+  const openEditEvent = (ev: any) => {
+    setSelectedEvent(null);
+    setEditingId(ev.id);
+    setFormData({
+      title: ev.title || "",
+      event_date: ev.event_date || "",
+      event_time: ev.event_time || "",
+      event_type: ev.event_type || "meeting",
+      description: ev.description || "",
+      tagged_user_ids: ev.tagged_user_ids || [],
+    });
+    setShowAddEvent(true);
+  };
+
+  const handleSubmitEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/calendar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, created_by: mockUser.id }),
-      });
+      const res = await fetch(
+        editingId ? `/api/calendar/${editingId}` : "/api/calendar",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(
+            editingId ? formData : { ...formData, created_by: mockUser.id }
+          ),
+        }
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to add event");
+        throw new Error(data.error || "Failed to save event");
       }
-      const newEvent = await res.json();
-      setEvents([...events, newEvent]);
-      setFormData({
-        title: "",
-        event_date: "",
-        event_time: "",
-        event_type: "meeting",
-        description: "",
-      });
+      const saved = await res.json();
+      setEvents((prev) =>
+        editingId ? prev.map((ev) => (ev.id === saved.id ? saved : ev)) : [...prev, saved]
+      );
+      setFormData(blankForm);
       setShowAddEvent(false);
-      toast.success("Event added");
+      setEditingId(null);
+      toast.success(editingId ? "Event updated" : "Event added");
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -459,7 +509,7 @@ export default function CalendarPage() {
 
             {canWrite && (
               <button
-                onClick={() => setShowAddEvent(true)}
+                onClick={openAddEvent}
                 className="text-sage text-[12px] underline hover:text-bottle cursor-pointer"
               >
                 + add event
@@ -510,9 +560,9 @@ export default function CalendarPage() {
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-md w-full">
                 <h2 className="font-fraunces text-[20px] font-medium text-bottle mb-4">
-                  Add Event
+                  {editingId ? "Edit Event" : "Add Event"}
                 </h2>
-                <form onSubmit={handleAddEvent} className="space-y-4">
+                <form onSubmit={handleSubmitEvent} className="space-y-4">
                   <div>
                     <label className="block text-[12px] uppercase text-sage mb-2">
                       Event Title
@@ -588,16 +638,48 @@ export default function CalendarPage() {
                       placeholder="Notes about this event"
                     />
                   </div>
+                  {users.length > 0 && (
+                    <div>
+                      <label className="block text-[12px] uppercase text-sage mb-2">
+                        Tag people{" "}
+                        <span className="text-mist normal-case">
+                          (shows on their home page)
+                        </span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {users.map((u) => {
+                          const on = formData.tagged_user_ids.includes(u.id);
+                          return (
+                            <button
+                              key={u.id}
+                              type="button"
+                              onClick={() => toggleTagged(u.id)}
+                              className={`px-3 py-1 text-[12px] rounded-full border ${
+                                on
+                                  ? "bg-bottle text-white border-bottle"
+                                  : "border-[#D7DECF] text-sage hover:border-bottle"
+                              }`}
+                            >
+                              {u.display_name || u.short_name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-2 pt-2">
                     <button
                       type="submit"
                       className="flex-1 bg-bottle text-white rounded py-2 text-[13px] font-medium hover:opacity-90"
                     >
-                      Add Event
+                      {editingId ? "Save changes" : "Add Event"}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setShowAddEvent(false)}
+                      onClick={() => {
+                        setShowAddEvent(false);
+                        setEditingId(null);
+                      }}
                       className="flex-1 border border-[#D7DECF] rounded py-2 text-[13px] text-sage hover:bg-whitewash"
                     >
                       Cancel
@@ -610,65 +692,15 @@ export default function CalendarPage() {
 
           {/* Event Detail Modal */}
           {selectedEvent && (
-            <div
-              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-              onClick={() => setSelectedEvent(null)}
-            >
-              <div
-                className="bg-white rounded-lg p-6 max-w-md w-full"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded ${typeClass(
-                      selectedEvent.event_type
-                    )}`}
-                  >
-                    {selectedEvent.event_type}
-                  </span>
-                  <button
-                    onClick={() => setSelectedEvent(null)}
-                    className="text-sage hover:text-bottle text-lg leading-none"
-                  >
-                    ✕
-                  </button>
-                </div>
-                <h2 className="font-fraunces text-[20px] font-medium text-bottle mb-2">
-                  {selectedEvent.title}
-                </h2>
-                <div className="font-mono text-[12px] text-sage mb-1">
-                  {new Date(selectedEvent.event_date).toLocaleDateString("en-US", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                  {selectedEvent.event_time &&
-                    ` · ${formatTime(selectedEvent.event_time)}`}
-                </div>
-                {selectedEvent.description && (
-                  <p className="text-[13px] text-pine mt-3 whitespace-pre-wrap">
-                    {selectedEvent.description}
-                  </p>
-                )}
-                <div className="flex gap-2 pt-5">
-                  {canWrite && (
-                    <button
-                      onClick={() => deleteEvent(selectedEvent.id)}
-                      className="flex-1 border border-[#E2C9C9] text-[#B5524F] rounded py-2 text-[13px] font-medium hover:bg-[#FBF3F3]"
-                    >
-                      Delete event
-                    </button>
-                  )}
-                  <button
-                    onClick={() => setSelectedEvent(null)}
-                    className="flex-1 border border-[#D7DECF] rounded py-2 text-[13px] text-sage hover:bg-whitewash"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            </div>
+            <EventDetailModal
+              event={selectedEvent}
+              users={users}
+              canDelete={canWrite}
+              onDelete={deleteEvent}
+              canEdit={selectedEvent.created_by === mockUser.id}
+              onEdit={openEditEvent}
+              onClose={() => setSelectedEvent(null)}
+            />
           )}
     </>
   );

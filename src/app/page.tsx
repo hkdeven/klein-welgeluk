@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
+import EventDetailModal from "@/components/EventDetailModal";
 import { useEditMode } from "@/components/EditModeContext";
 import { useCurrentUser } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
@@ -22,6 +23,39 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString();
 }
 
+// "Today", "Tomorrow", or e.g. "Wed, 8 Jul" — plus the time if set.
+function eventWhen(dateStr: string, time?: string | null) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr);
+  d.setHours(0, 0, 0, 0);
+  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
+  let label =
+    days === 0
+      ? "Today"
+      : days === 1
+      ? "Tomorrow"
+      : new Date(dateStr).toLocaleDateString("en-US", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        });
+  if (time) {
+    const [h, m] = time.split(":");
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? "PM" : "AM";
+    label += ` · ${hour % 12 === 0 ? 12 : hour % 12}:${m} ${ampm}`;
+  }
+  return label;
+}
+
+const eventTypeClass = (t: string) =>
+  t === "meeting"
+    ? "bg-[#D7DECF] text-bottle"
+    : t === "delivery"
+    ? "bg-[#FBF3E9] text-brass"
+    : "bg-[#EBD4D4] text-[#7A3B3B]";
+
 
 export default function HomePage() {
   const { pages, loading } = usePages();
@@ -34,6 +68,9 @@ export default function HomePage() {
   const [slides, setSlides] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [activityShown, setActivityShown] = useState(10);
+  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
 
   const ACTIVITY_ENDPOINT: Record<string, string> = {
     comment: "comments",
@@ -118,6 +155,18 @@ export default function HomePage() {
       .then((d) => setActivity(d.activity || []))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!mockUser.id) return;
+    fetch(`/api/calendar?upcoming_for=${mockUser.id}`)
+      .then((r) => r.json())
+      .then((d) => setUpcoming(d.events || []))
+      .catch(() => {});
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((d) => setUsers(d.users || []))
+      .catch(() => {});
+  }, [mockUser.id]);
 
   const uploadSlide = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -285,6 +334,46 @@ export default function HomePage() {
             </div>
           )}
 
+          {/* Upcoming events — events you're tagged in within the next 7 days */}
+          {upcoming.length > 0 && (
+            <>
+              <h2 className="section-h">Upcoming events</h2>
+              <div className="sub-grid">
+                {upcoming.map((ev) => (
+                  <button
+                    key={ev.id}
+                    onClick={() => setSelectedEvent(ev)}
+                    className="sub-card text-left"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}
+                    >
+                      <span
+                        className={`text-[9px] px-2 py-0.5 rounded ${eventTypeClass(
+                          ev.event_type
+                        )}`}
+                      >
+                        {ev.event_type}
+                      </span>
+                      <span className="who" style={{ margin: 0 }}>
+                        {eventWhen(ev.event_date, ev.event_time)}
+                      </span>
+                    </div>
+                    <div className="name">{ev.title}</div>
+                    {ev.description && (
+                      <div className="row" style={{ color: "var(--sage)" }}>
+                        {ev.description.length > 80
+                          ? ev.description.slice(0, 80) + "…"
+                          : ev.description}
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
           {/* Recent activity */}
           <h2 className="section-h">Recent activity</h2>
           <div className="home-card activity">
@@ -349,6 +438,14 @@ export default function HomePage() {
               </p>
             )}
           </div>
+
+          {selectedEvent && (
+            <EventDetailModal
+              event={selectedEvent}
+              users={users}
+              onClose={() => setSelectedEvent(null)}
+            />
+          )}
     </>
   );
 }

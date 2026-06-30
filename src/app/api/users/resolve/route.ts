@@ -12,7 +12,8 @@ const supabase = supabaseUrl && supabaseServiceKey
 
 // Invite-only: maps an authenticated email to an existing `users` row.
 // Unknown emails are rejected (403) — an owner must add them first.
-// Also backfills the Google profile photo on the row.
+// Backfills the Google profile photo ONLY when the row has no avatar yet, so a
+// user's own uploaded avatar is never overwritten on subsequent sign-ins.
 export async function POST(request: NextRequest) {
   try {
     if (!supabase) {
@@ -37,8 +38,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Backfill the avatar from Google if we don't have one (or it changed).
-    if (avatar_url && avatar_url !== existing.avatar_url) {
+    // Backfill the avatar from Google only when the row has none — never clobber
+    // an avatar the user has already set (e.g. their own uploaded photo).
+    if (avatar_url && !existing.avatar_url) {
       const { data: updated, error: updErr } = await supabase
         .from("users")
         .update({ avatar_url })
