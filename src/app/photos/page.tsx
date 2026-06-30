@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import PhotoUploadModal, {
   PHOTO_CATEGORIES,
-  PHOTO_CATEGORY_LABELS,
+  labelFor,
 } from "@/components/PhotoUploadModal";
 import { useToast } from "@/components/Toast";
-import { useAuth } from "@/components/AuthProvider";
-import { useCurrentUser } from "@/components/AuthProvider";
+import { useAuth, useCurrentUser } from "@/components/AuthProvider";
+import { useEditMode } from "@/components/EditModeContext";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
 const storageUrl = (path: string) =>
@@ -17,6 +17,7 @@ const photoUrlOf = (p: any) => p.external_url || storageUrl(`photos/${p.storage_
 export default function PhotosPage() {
   const toast = useToast();
   const { canWrite } = useAuth();
+  const { editMode } = useEditMode();
   const user = useCurrentUser();
 
   const [pageId, setPageId] = useState<string | null>(null);
@@ -102,6 +103,9 @@ export default function PhotosPage() {
     }
   };
 
+  const photoCats = Array.from(
+    new Set([...PHOTO_CATEGORIES, ...photos.map((p) => p.category).filter(Boolean)])
+  );
   const visible =
     filter === "all" ? photos : photos.filter((p) => (p.category || "inspiration") === filter);
 
@@ -112,7 +116,7 @@ export default function PhotosPage() {
           <h1>Photos</h1>
         </div>
         {canWrite && (
-          <button className="post-btn" onClick={() => setModal(true)}>
+          <button className="add-mini" onClick={() => setModal(true)}>
             + Add photos
           </button>
         )}
@@ -122,9 +126,9 @@ export default function PhotosPage() {
         <span className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
           All
         </span>
-        {PHOTO_CATEGORIES.map((c) => (
+        {photoCats.map((c) => (
           <span key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
-            {PHOTO_CATEGORY_LABELS[c]}
+            {labelFor(c)}
           </span>
         ))}
       </div>
@@ -142,10 +146,8 @@ export default function PhotosPage() {
                 onClick={() => setLightbox({ url, caption: p.caption })}
               >
                 <img src={url} alt={p.caption || ""} />
-                {p.category && (
-                  <span className="tag">{PHOTO_CATEGORY_LABELS[p.category] || p.category}</span>
-                )}
-                {canWrite && (
+                {p.category && <span className="tag">{labelFor(p.category)}</span>}
+                {canWrite && editMode && (
                   <button
                     className="del-badge"
                     style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}
@@ -177,6 +179,8 @@ export default function PhotosPage() {
 
       <PhotoUploadModal
         open={modal}
+        categories={photoCats}
+        allowCustom={editMode}
         onClose={() => setModal(false)}
         uploadFile={uploadPhoto}
         addUrl={addPhotoUrl}

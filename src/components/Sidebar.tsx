@@ -23,6 +23,64 @@ interface SidebarProps {
 const slugify = (text: string) =>
   text.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
+// Simple, distinct line icons for the top-level nav.
+function NavIcon({ name }: { name: string }) {
+  const p = {
+    width: 17,
+    height: 17,
+    viewBox: "0 0 20 20",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.5,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    style: { flex: "0 0 auto" },
+  };
+  switch (name) {
+    case "home":
+      return (
+        <svg {...p}>
+          <path d="M3 9.5 10 3l7 6.5" />
+          <path d="M5 8.5V17h10V8.5" />
+        </svg>
+      );
+    case "overview":
+      return (
+        <svg {...p}>
+          <rect x="3" y="3" width="6" height="6" rx="1" />
+          <rect x="11" y="3" width="6" height="6" rx="1" />
+          <rect x="3" y="11" width="6" height="6" rx="1" />
+          <rect x="11" y="11" width="6" height="6" rx="1" />
+        </svg>
+      );
+    case "documents":
+      return (
+        <svg {...p}>
+          <path d="M6 2.5h5l3 3V17.5H6z" />
+          <path d="M11 2.5v3h3" />
+          <path d="M8 10.5h4M8 13.5h4" />
+        </svg>
+      );
+    case "photos":
+      return (
+        <svg {...p}>
+          <rect x="2.5" y="4" width="15" height="12" rx="1.5" />
+          <circle cx="7" cy="8.5" r="1.2" />
+          <path d="M3.5 14.5l4-3.5 3 2.5 2.5-2 3.5 3" />
+        </svg>
+      );
+    case "calendar":
+      return (
+        <svg {...p}>
+          <rect x="3" y="4.5" width="14" height="12.5" rx="1.5" />
+          <path d="M3 8.5h14M7 3v3M13 3v3" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 export default function Sidebar({ pages, canCreate = true, editMode = false }: SidebarProps) {
   const pathname = usePathname();
   const activeSlug = decodeURIComponent((pathname || "").replace(/^\//, ""));
@@ -160,22 +218,23 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
 
         <div className="px-[22px]">
           {[
-            { href: "/overview", label: "✦ Overview", slug: "overview" },
-            { href: "/", label: "⌂ Home", slug: "" },
-            { href: "/documents", label: "▤ Documents", slug: "documents" },
-            { href: "/photos", label: "▦ Photos", slug: "photos" },
-            { href: "/calendar", label: "◫ Calendar", slug: "calendar" },
+            { href: "/overview", name: "overview", text: "Overview", slug: "overview" },
+            { href: "/", name: "home", text: "Home", slug: "" },
+            { href: "/documents", name: "documents", text: "Documents", slug: "documents" },
+            { href: "/photos", name: "photos", text: "Photos", slug: "photos" },
+            { href: "/calendar", name: "calendar", text: "Calendar", slug: "calendar" },
           ].map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={`flex items-center gap-[9px] px-[22px] py-[9px] text-[13px] ${
+              className={`flex items-center gap-[10px] px-[22px] py-[9px] text-[13px] ${
                 isActive(l.slug)
                   ? "bg-[rgba(250,249,245,0.08)] border-l-2 border-brass text-white"
                   : "text-[rgba(250,249,245,0.82)]"
               }`}
             >
-              {l.label}
+              <NavIcon name={l.name} />
+              {l.text}
             </Link>
           ))}
         </div>

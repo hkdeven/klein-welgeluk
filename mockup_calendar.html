@@ -800,6 +800,12 @@ h2.section-h::after{content:"";flex:1;height:1px;background:#E5E1D3;}
   white-space:nowrap;
 }
 
+
+.logo-lockup{display:flex;align-items:center;gap:12px;padding:0 22px 18px;border-bottom:1px solid rgba(250,249,245,0.18);margin-bottom:14px;}
+.logo-lockup .badge{width:54px;height:54px;border-radius:50%;background:#fff;flex:none;display:flex;align-items:center;justify-content:center;}
+.logo-lockup .badge img{width:38px;height:auto;display:block;}
+.logo-lockup .word{font-family:'Fraunces',serif;font-weight:500;color:#fff;font-size:17px;line-height:1.05;}
+.logo-lockup .word small{display:block;font-family:'Source Sans 3',sans-serif;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#9CA89C;margin-top:4px;font-weight:400;}
 </style>
 </head>
 <body>
@@ -811,11 +817,12 @@ h2.section-h::after{content:"";flex:1;height:1px;background:#E5E1D3;}
 
 <div class="shell">
   <aside class="ledger">
-    <div class="house-name">Klein Welgeluk<small>build diary</small></div>
+    <div class="logo-lockup"><div class="badge"><img src="kw-monogram.png" alt="KW"></div><div class="word">Klein<br>Welgeluk<small>build diary</small></div></div>
      <nav>
        <div class="top-link">✦&nbsp; Overview</div>
        <div class="top-link">⌂&nbsp; Home</div>
        <div class="top-link">▤&nbsp; Documents</div>
+      <div class="top-link">▦&nbsp; Photos</div>
        <div class="top-link active">◫&nbsp; Calendar</div>
        <div class="group">▾ Building</div>
        <a class="tab">Bedrooms</a>

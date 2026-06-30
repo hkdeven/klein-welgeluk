@@ -63,6 +63,10 @@ export default function DynamicPage() {
   const [assignments, setAssignments] = useState<any[]>([]);
   const [tags, setTags] = useState<any[]>([]);
   const [newTag, setNewTag] = useState("");
+  const [stages, setStages] = useState<any[]>([]);
+  const [addingStage, setAddingStage] = useState(false);
+  const [stageName, setStageName] = useState("");
+  const [childCurrents, setChildCurrents] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setBrief(page?.brief || "");
@@ -73,16 +77,23 @@ export default function DynamicPage() {
     let active = true;
     (async () => {
       try {
-        const [cost, a, t, u] = await Promise.all([
+        const [cost, a, t, u, s] = await Promise.all([
           fetch(`/api/costing?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/assignments?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/tags?page_id=${pageId}`).then((r) => r.json()),
           fetch(`/api/users`).then((r) => r.json()),
+          fetch(`/api/stages?page_id=${pageId}`).then((r) => r.json()),
         ]);
         if (!active) return;
         setAssignments(a.assignments || []);
         setTags(t.tags || []);
         setUsers(u.users || []);
+        setStages(s.stages || []);
+        const childIds = (page?.children || []).map((c) => c.id);
+        if (childIds.length) {
+          const cu = await fetch(`/api/stages?ids=${childIds.join(",")}`).then((r) => r.json());
+          if (active) setChildCurrents(cu.currents || {});
+        }
         if (cost.costing) {
           setCosting({
             budgeted_amount: cost.costing.budgeted_amount || "",
@@ -196,6 +207,51 @@ export default function DynamicPage() {
     }
   };
 
+  const setCurrentStage = async (stageId: string) => {
+    if (!pageId) return;
+    try {
+      const res = await fetch("/api/stages", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, current_id: stageId }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      const s = await fetch(`/api/stages?page_id=${pageId}`).then((r) => r.json());
+      setStages(s.stages || []);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const addStage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pageId || !stageName.trim()) return;
+    try {
+      const res = await fetch("/api/stages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, name: stageName }),
+      });
+      if (!res.ok) throw new Error("Failed to add stage");
+      const row = await res.json();
+      setStages((prev) => [...prev, row]);
+      setStageName("");
+      setAddingStage(false);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const deleteStage = async (id: string) => {
+    try {
+      const res = await fetch(`/api/stages/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete stage");
+      setStages((prev) => prev.filter((s) => s.id !== id));
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
   const assignedIds = assignments.map((a) => a.user_id);
   const availableUsers = users.filter((u) => !assignedIds.includes(u.id));
 
@@ -231,6 +287,64 @@ export default function DynamicPage() {
               </div>
 
               {editMode && <EditBanner />}
+
+              {/* Stage pipeline */}
+              {(stages.length > 0 || canEdit) && (
+                <div className="stage-line">
+                  <div className="crumbs">
+                    {stages.length === 0 && <span className="step">No stages yet</span>}
+                    {stages.map((s, i) => [
+                      i > 0 ? (
+                        <span key={`c-${s.id}`} className="chevron">
+                          ›
+                        </span>
+                      ) : null,
+                      <span
+                        key={s.id}
+                        className={`step ${
+                          s.is_current ? "current" : s.is_completed ? "done" : ""
+                        } ${canEdit ? "clickable" : ""}`}
+                        onClick={canEdit ? () => setCurrentStage(s.id) : undefined}
+                        title={canEdit ? "Set as current status" : undefined}
+                      >
+                        {s.name}
+                        {canEdit && (
+                          <span
+                            className="stage-del"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteStage(s.id);
+                            }}
+                          >
+                            ✕
+                          </span>
+                        )}
+                      </span>,
+                    ])}
+                  </div>
+                  {canEdit && (
+                    <div className="stage-actions">
+                      {addingStage ? (
+                        <form onSubmit={addStage} style={{ display: "flex", gap: 6 }}>
+                          <input
+                            autoFocus
+                            className="stage-add-input"
+                            value={stageName}
+                            onChange={(e) => setStageName(e.target.value)}
+                            placeholder="Stage name"
+                          />
+                          <button type="submit">add</button>
+                          <button type="button" onClick={() => setAddingStage(false)}>
+                            cancel
+                          </button>
+                        </form>
+                      ) : (
+                        <button onClick={() => setAddingStage(true)}>+ add stage</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Assigned + Tags */}
               <div className="meta-row">
@@ -406,6 +520,9 @@ export default function DynamicPage() {
                     {children.map((child) => (
                       <a key={child.id} href={`/${child.slug}`} className="sub-card-lg">
                         <div className="name">{child.title}</div>
+                        <div className="status">
+                          Current status: {childCurrents[child.id] || "Not started"}
+                        </div>
                         {child.brief && (
                           <div
                             className="brief rich-text"

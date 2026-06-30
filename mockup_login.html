@@ -800,6 +800,12 @@ h2.section-h::after{content:"";flex:1;height:1px;background:#E5E1D3;}
   white-space:nowrap;
 }
 
+
+.logo-lockup{display:flex;align-items:center;gap:12px;padding:0 22px 18px;border-bottom:1px solid rgba(250,249,245,0.18);margin-bottom:14px;}
+.logo-lockup .badge{width:54px;height:54px;border-radius:50%;background:#fff;flex:none;display:flex;align-items:center;justify-content:center;}
+.logo-lockup .badge img{width:38px;height:auto;display:block;}
+.logo-lockup .word{font-family:'Fraunces',serif;font-weight:500;color:#fff;font-size:17px;line-height:1.05;}
+.logo-lockup .word small{display:block;font-family:'Source Sans 3',sans-serif;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#9CA89C;margin-top:4px;font-weight:400;}
 </style>
 <style>.login-footer{position:fixed;bottom:0;left:0;right:0;}</style>
 </head>
@@ -812,7 +818,7 @@ h2.section-h::after{content:"";flex:1;height:1px;background:#E5E1D3;}
 
 <div class="login-page">
   <div class="login-card" id="collab-view">
-    <div class="house">Klein Welgeluk<small>build diary</small></div>
+    <img src="login-logo.png" alt="Klein Welgeluk" style="width:260px;max-width:100%;display:block;margin:0 auto 6px;">
 
     <h2>Sign in</h2>
 
@@ -837,7 +843,7 @@ h2.section-h::after{content:"";flex:1;height:1px;background:#E5E1D3;}
   </div>
 
   <div class="login-card" id="guest-view" style="display:none;">
-    <div class="house">Klein Welgeluk<small>build diary</small></div>
+    <img src="login-logo.png" alt="Klein Welgeluk" style="width:260px;max-width:100%;display:block;margin:0 auto 6px;">
 
     <h2>Guest access</h2>
     <p style="font-size:13px;color:var(--sage);text-align:center;line-height:1.5;margin:0 0 18px;">

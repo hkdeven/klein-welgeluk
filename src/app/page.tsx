@@ -30,6 +30,7 @@ export default function HomePage() {
   const mockUser = useCurrentUser();
   const [assigned, setAssigned] = useState<any[]>([]);
   const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
+  const [stageByPage, setStageByPage] = useState<Record<string, string>>({});
   const [slides, setSlides] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [activityShown, setActivityShown] = useState(10);
@@ -90,6 +91,13 @@ export default function HomePage() {
             })
         );
         setTagsByPage(Object.fromEntries(entries));
+
+        // Current stage for each assigned page.
+        const ids = list.filter((a: any) => a.page).map((a: any) => a.page.id);
+        if (ids.length) {
+          const cu = await fetch(`/api/stages?ids=${ids.join(",")}`).then((r) => r.json());
+          setStageByPage(cu.currents || {});
+        }
       } catch {
         /* ignore */
       }
@@ -248,6 +256,14 @@ export default function HomePage() {
                   className="sub-card"
                 >
                   <div className="name">{a.page?.title || "Page"}</div>
+                  {a.page && (
+                    <div className="row">
+                      Current status:{" "}
+                      <span className="current">
+                        {stageByPage[a.page.id] || "Not started"}
+                      </span>
+                    </div>
+                  )}
                   {a.page && <div className="who">{breadcrumbFor(a.page.id)}</div>}
                   {a.page && (tagsByPage[a.page.id]?.length ?? 0) > 0 && (
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>

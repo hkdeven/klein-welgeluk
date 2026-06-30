@@ -5,10 +5,11 @@ import RichTextEditor from "@/components/RichTextEditor";
 import DocUploadModal from "@/components/DocUploadModal";
 import PhotoUploadModal, {
   PHOTO_CATEGORIES,
-  PHOTO_CATEGORY_LABELS,
+  labelFor,
 } from "@/components/PhotoUploadModal";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/components/AuthProvider";
+import { useEditMode } from "@/components/EditModeContext";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
 const storageUrl = (path: string) =>
@@ -29,6 +30,7 @@ interface PageMediaProps {
 export default function PageMedia({ pageId, user, defaultCategory }: PageMediaProps) {
   const toast = useToast();
   const { canWrite } = useAuth();
+  const { editMode } = useEditMode();
 
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
@@ -176,6 +178,9 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
     }
   };
 
+  const photoCats = Array.from(
+    new Set([...PHOTO_CATEGORIES, ...photos.map((p) => p.category).filter(Boolean)])
+  );
   const visiblePhotos =
     photoFilter === "all"
       ? photos
@@ -224,12 +229,12 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       )}
 
       {/* Photos */}
-      <div className="gallery-bar">
+      <div className="gallery-bar" style={{ alignItems: "baseline" }}>
         <h2 className="section-h" style={{ margin: "34px 0 0", flex: "0 0 auto" }}>
           Photo gallery
         </h2>
         {canWrite && (
-          <button className="post-btn" onClick={() => setPhotoModal(true)}>
+          <button className="add-mini" onClick={() => setPhotoModal(true)}>
             + Add photos
           </button>
         )}
@@ -242,13 +247,13 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         >
           All
         </span>
-        {PHOTO_CATEGORIES.map((c) => (
+        {photoCats.map((c) => (
           <span
             key={c}
             className={photoFilter === c ? "active" : ""}
             onClick={() => setPhotoFilter(c)}
           >
-            {PHOTO_CATEGORY_LABELS[c]}
+            {labelFor(c)}
           </span>
         ))}
       </div>
@@ -265,10 +270,8 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
                 onClick={() => setLightbox({ url, caption: p.caption })}
               >
                 <img src={url} alt={p.caption || ""} />
-                {p.category && (
-                  <span className="tag">{PHOTO_CATEGORY_LABELS[p.category] || p.category}</span>
-                )}
-                {canWrite && (
+                {p.category && <span className="tag">{labelFor(p.category)}</span>}
+                {canWrite && editMode && (
                   <button
                     className="del-badge"
                     style={{ position: "absolute", top: 8, right: 8, zIndex: 2 }}
@@ -358,6 +361,8 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
 
       <PhotoUploadModal
         open={photoModal}
+        categories={photoCats}
+        allowCustom={editMode}
         onClose={() => setPhotoModal(false)}
         uploadFile={uploadPhoto}
         addUrl={addPhotoUrl}

@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/Toast";
-import { uploadToStorage, publicUrl, sanitizeName } from "@/lib/upload";
+import { uploadToStorage, publicUrl } from "@/lib/upload";
+import ProfilePhotoCropper from "@/components/ProfilePhotoCropper";
 
 export default function ProfilePage() {
   const mockUser = useCurrentUser();
@@ -14,6 +15,7 @@ export default function ProfilePage() {
   const [team, setTeam] = useState<any[]>([]);
   const [invite, setInvite] = useState({ email: "", display_name: "", role: "collaborator" });
   const [avatarBusy, setAvatarBusy] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
   const [notifications, setNotifications] = useState({
     mentioned: true,
@@ -109,12 +111,17 @@ export default function ProfilePage() {
     }
   };
 
-  const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPickAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    e.target.value = "";
+    if (file) setCropFile(file);
+  };
+
+  const saveCroppedAvatar = async (blob: Blob) => {
     setAvatarBusy(true);
     try {
-      const path = `avatars/${mockUser.id}_${Date.now()}_${sanitizeName(file.name)}`;
+      const file = new File([blob], `avatar_${Date.now()}.jpg`, { type: "image/jpeg" });
+      const path = `avatars/${mockUser.id}_${Date.now()}.jpg`;
       await uploadToStorage("photos", path, file);
       const res = await fetch(`/api/users/${mockUser.id}`, {
         method: "PATCH",
@@ -127,6 +134,7 @@ export default function ProfilePage() {
     } catch (err) {
       toast.error((err as Error).message);
       setAvatarBusy(false);
+      setCropFile(null);
     }
   };
 
@@ -194,7 +202,7 @@ export default function ProfilePage() {
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={uploadAvatar}
+                    onChange={onPickAvatar}
                   />
                 </div>
               )}
@@ -444,6 +452,15 @@ export default function ProfilePage() {
               </p>
             </div>
           </div>
+
+          {cropFile && (
+            <ProfilePhotoCropper
+              file={cropFile}
+              busy={avatarBusy}
+              onCancel={() => setCropFile(null)}
+              onCropped={saveCroppedAvatar}
+            />
+          )}
     </>
   );
 }

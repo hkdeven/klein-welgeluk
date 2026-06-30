@@ -101,7 +101,7 @@ export default function LoginPage() {
           </form>
 
           <div className="text-center text-[11px] text-mist mt-3.5">
-            For owners, architect, engineer, contractors.
+            For owners, architects, engineers, and contractors.
           </div>
 
           <div className="text-center text-[12px] text-sage mt-[18px] pt-[18px] border-t border-[#ECE8DC]">

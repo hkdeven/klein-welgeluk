@@ -171,7 +171,6 @@ main {
 }
 
 .login-page {
-  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -185,7 +184,7 @@ main {
   border-radius: 6px;
   max-width: 420px;
   width: 100%;
-  padding: 38px 36px 30px;
+  padding: 0 36px 30px;
   box-shadow: 0 6px 40px rgba(43, 64, 48, 0.06);
 }
 
@@ -384,6 +383,34 @@ main {
 .title-meta .dot { color: var(--mist); margin: 0 6px; }
 .title-meta a { color: var(--sage); text-decoration: underline; }
 
+/* Stage pipeline (sub-page) */
+.stage-line {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 22px; padding: 9px 0; border-bottom: 1px solid #ECE8DC;
+  font-size: 12px; flex-wrap: wrap;
+}
+.stage-line .crumbs {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font-family: 'IBM Plex Mono', monospace; color: var(--mist);
+}
+.stage-line .step { color: var(--mist); }
+.stage-line .step.done { color: var(--sage); }
+.stage-line .step.current { color: var(--brass); font-weight: 600; }
+.stage-line .step.clickable { cursor: pointer; }
+.stage-line .step.clickable:hover { color: var(--bottle); }
+.stage-line .chevron { color: #D9D4C5; font-size: 10px; }
+.stage-line .stage-del {
+  color: var(--mist); cursor: pointer; margin-left: 3px; font-size: 10px;
+}
+.stage-line .stage-actions { margin-left: auto; display: flex; gap: 14px; align-items: center; }
+.stage-line .stage-actions button {
+  color: var(--sage); text-decoration: underline; background: none; border: none;
+  cursor: pointer; font-size: 11px;
+}
+.stage-line .stage-add-input {
+  border: 1px solid #D7DECF; border-radius: 4px; padding: 3px 8px; font-size: 12px;
+}
+
 .meta-row { display: flex; gap: 32px; margin-bottom: 28px; flex-wrap: wrap; }
 .meta-field { font-size: 12.5px; }
 .meta-field .label {
@@ -486,6 +513,20 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 .pill-filters span.active { background: var(--bottle); color: var(--white); border-color: var(--bottle); }
 .gallery-actions { display: flex; gap: 10px; font-size: 12px; color: var(--sage); }
 
+/* compact action button (kept no taller than a section heading) */
+.add-mini {
+  background: var(--bottle);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 11px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.add-mini:hover { opacity: 0.9; }
+
 /* Masonry: CSS columns so each photo keeps its real aspect ratio
    (portrait taller, landscape shorter) and is shown in full. */
 .masonry { column-count: 3; column-gap: 14px; }
@@ -552,6 +593,10 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 .sub-list .sub-card-lg .name {
   font-family: 'Fraunces', serif; font-size: 17px; color: var(--bottle);
   font-weight: 500; margin-bottom: 4px;
+}
+.sub-list .sub-card-lg .status {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
+  color: var(--brass); margin-bottom: 8px;
 }
 .sub-list .sub-card-lg .brief { font-size: 13px; color: var(--pine); line-height: 1.5; max-width: 600px; }
 .sub-list .sub-card-lg.add {

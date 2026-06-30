@@ -2,29 +2,32 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export const PHOTO_CATEGORIES = ["inspiration", "site", "reference", "progress"];
+export const PHOTO_CATEGORIES = ["inspiration", "site", "reference"];
 export const PHOTO_CATEGORY_LABELS: Record<string, string> = {
   inspiration: "Inspiration",
   site: "Site photos",
   reference: "Reference",
-  progress: "Progress",
 };
+
+export const labelFor = (c: string) =>
+  PHOTO_CATEGORY_LABELS[c] || c.charAt(0).toUpperCase() + c.slice(1);
 
 interface PhotoUploadModalProps {
   open: boolean;
   defaultCategory?: string;
+  categories?: string[];
+  allowCustom?: boolean;
   onClose: () => void;
-  // Upload a single file; resolves to the created photo row.
   uploadFile: (file: File, category: string, description: string) => Promise<any>;
-  // Optional: add by external URL.
   addUrl?: (url: string, category: string, description: string) => Promise<any>;
-  // Called with all created rows once everything finished.
   onDone: (rows: any[]) => void;
 }
 
 export default function PhotoUploadModal({
   open,
   defaultCategory = "inspiration",
+  categories = PHOTO_CATEGORIES,
+  allowCustom = false,
   onClose,
   uploadFile,
   addUrl,
@@ -33,6 +36,7 @@ export default function PhotoUploadModal({
   const [files, setFiles] = useState<File[]>([]);
   const [url, setUrl] = useState("");
   const [category, setCategory] = useState(defaultCategory);
+  const [customCat, setCustomCat] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<{ i: number; n: number } | null>(null);
@@ -44,6 +48,7 @@ export default function PhotoUploadModal({
       setFiles([]);
       setUrl("");
       setCategory(defaultCategory || "inspiration");
+      setCustomCat("");
       setDescription("");
       setProgress(null);
       setError(null);
@@ -53,10 +58,11 @@ export default function PhotoUploadModal({
   if (!open) return null;
 
   const total = files.length + (url.trim() ? 1 : 0);
+  const effectiveCat = category === "__new__" ? customCat.trim() : category;
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (total === 0 || !category) return;
+    if (total === 0 || !effectiveCat) return;
     setBusy(true);
     setError(null);
     const rows: any[] = [];
@@ -65,7 +71,7 @@ export default function PhotoUploadModal({
     for (const f of files) {
       setProgress({ i: ++done, n: total });
       try {
-        rows.push(await uploadFile(f, category, description));
+        rows.push(await uploadFile(f, effectiveCat, description));
       } catch (err) {
         errs.push(`${f.name}: ${(err as Error).message}`);
       }
@@ -73,7 +79,7 @@ export default function PhotoUploadModal({
     if (url.trim() && addUrl) {
       setProgress({ i: ++done, n: total });
       try {
-        rows.push(await addUrl(url.trim(), category, description));
+        rows.push(await addUrl(url.trim(), effectiveCat, description));
       } catch (err) {
         errs.push((err as Error).message);
       }
@@ -82,9 +88,7 @@ export default function PhotoUploadModal({
     setProgress(null);
     if (rows.length) onDone(rows);
     if (errs.length) {
-      setError(
-        errs[0] + (errs.length > 1 ? ` (and ${errs.length - 1} more failed)` : "")
-      );
+      setError(errs[0] + (errs.length > 1 ? ` (and ${errs.length - 1} more failed)` : ""));
     } else {
       onClose();
     }
@@ -144,12 +148,22 @@ export default function PhotoUploadModal({
           Category <span style={{ color: "var(--brass)" }}>*</span>
         </label>
         <select value={category} onChange={(e) => setCategory(e.target.value)} required>
-          {PHOTO_CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <option key={c} value={c}>
-              {PHOTO_CATEGORY_LABELS[c] || c}
+              {labelFor(c)}
             </option>
           ))}
+          {allowCustom && <option value="__new__">+ New category…</option>}
         </select>
+        {category === "__new__" && (
+          <input
+            type="text"
+            value={customCat}
+            onChange={(e) => setCustomCat(e.target.value)}
+            placeholder="New category name"
+            autoFocus
+          />
+        )}
 
         <label>Description (optional)</label>
         <input
@@ -162,7 +176,7 @@ export default function PhotoUploadModal({
         <div className="flex gap-2 pt-4">
           <button
             type="submit"
-            disabled={total === 0 || busy}
+            disabled={total === 0 || !effectiveCat || busy}
             className="flex-1 bg-bottle text-white rounded py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
           >
             {busy

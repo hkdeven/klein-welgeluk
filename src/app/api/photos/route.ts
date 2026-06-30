@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
           uploaded_by,
         },
       ])
-      .select()
+      .select("*, uploader:uploaded_by(short_name), page:page_id(title, slug)")
       .single();
 
     if (error) {
