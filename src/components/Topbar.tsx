@@ -37,8 +37,13 @@ export default function Topbar({
           href="/profile"
           className="flex items-center gap-2 cursor-pointer hover:opacity-80"
         >
-          <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center">
-            {user.short_name?.charAt(0).toUpperCase()}
+          <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden">
+            {user.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+            ) : (
+              user.short_name?.charAt(0).toUpperCase()
+            )}
           </div>
           <span className="text-sage text-[12px]">{user.short_name}</span>
         </Link>

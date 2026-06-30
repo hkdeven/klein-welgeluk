@@ -12,8 +12,6 @@ export interface AppUser {
   email?: string;
 }
 
-// Shown only in the brief moment before the session resolves; gating means a
-// real user or guest is always required to see the app.
 const FALLBACK_USER: AppUser = {
   id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
   display_name: "Deven Blackburn",
@@ -38,6 +36,7 @@ interface AuthValue {
   isGuest: boolean;
   canWrite: boolean;
   loading: boolean;
+  authError: string | null;
   signInWithGoogle: () => void;
   signInWithMicrosoft: () => void;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
@@ -51,6 +50,7 @@ const AuthContext = createContext<AuthValue>({
   isGuest: false,
   canWrite: false,
   loading: true,
+  authError: null,
   signInWithGoogle: () => {},
   signInWithMicrosoft: () => {},
   signInWithEmail: async () => ({}),
@@ -63,6 +63,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [signedIn, setSignedIn] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   const handleSession = async (session: any) => {
     const authUser = session?.user;
@@ -73,17 +74,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: authUser.email,
-            display_name:
-              authUser.user_metadata?.full_name || authUser.user_metadata?.name,
+            avatar_url:
+              authUser.user_metadata?.avatar_url ||
+              authUser.user_metadata?.picture ||
+              null,
           }),
         });
         if (res.ok) {
           const u = await res.json();
           setAppUser({ ...u, email: authUser.email });
           setSignedIn(true);
+          setAuthError(null);
+        } else if (res.status === 403) {
+          // Invite-only: email not on the team — reject and sign out.
+          const d = await res.json().catch(() => ({}));
+          setAuthError(d.error || "This account isn't on the team yet.");
+          setAppUser(null);
+          setSignedIn(false);
+          await supabaseClient.auth.signOut();
         }
       } catch {
-        /* ignore */
+        /* ignore network errors */
       }
     } else {
       setAppUser(null);
@@ -112,19 +123,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const redirectTo =
     typeof window !== "undefined" ? `${window.location.origin}/` : undefined;
 
-  const signInWithGoogle = () =>
+  const signInWithGoogle = () => {
+    setAuthError(null);
     supabaseClient.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-  const signInWithMicrosoft = () =>
+  };
+  const signInWithMicrosoft = () => {
+    setAuthError(null);
     supabaseClient.auth.signInWithOAuth({
       provider: "azure",
       options: { redirectTo, scopes: "email" },
     });
+  };
   const signInWithEmail = async (email: string, password: string) => {
+    setAuthError(null);
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
     return { error: error?.message };
   };
   const enterGuest = () => {
     if (typeof window !== "undefined") localStorage.setItem(GUEST_KEY, "1");
+    setAuthError(null);
     setIsGuest(true);
   };
   const signOut = async () => {
@@ -143,8 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         signedIn,
         isGuest,
-        canWrite: signedIn, // guests are read-only
+        canWrite: signedIn,
         loading,
+        authError,
         signInWithGoogle,
         signInWithMicrosoft,
         signInWithEmail,

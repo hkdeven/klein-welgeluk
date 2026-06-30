@@ -294,7 +294,18 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       </h2>
       {comments.map((c: any) => (
         <div className="comment" key={c.id}>
-          <div className="av">{c.author?.short_name?.charAt(0).toUpperCase() || "?"}</div>
+          <div className="av" style={{ overflow: "hidden" }}>
+            {c.author?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={c.author.avatar_url}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              c.author?.short_name?.charAt(0).toUpperCase() || "?"
+            )}
+          </div>
           <div className="comment-card">
             <div className="who">
               {c.author?.short_name || "Unknown"}

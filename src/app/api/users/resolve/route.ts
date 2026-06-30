@@ -10,14 +10,15 @@ const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
-// Maps an authenticated email to a row in the `users` table, creating a
-// collaborator row on first sign-in so inserts (author_id etc.) stay valid.
+// Invite-only: maps an authenticated email to an existing `users` row.
+// Unknown emails are rejected (403) — an owner must add them first.
+// Also backfills the Google profile photo on the row.
 export async function POST(request: NextRequest) {
   try {
     if (!supabase) {
       return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
     }
-    const { email, display_name } = await request.json();
+    const { email, avatar_url } = await request.json();
     if (!email) {
       return NextResponse.json({ error: "email is required" }, { status: 400 });
     }
@@ -28,18 +29,26 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
       .maybeSingle();
     if (selErr) throw selErr;
-    if (existing) return NextResponse.json(existing);
 
-    const name = (display_name as string) || email.split("@")[0];
-    const shortName = name.split(" ")[0];
-    const { data: created, error: insErr } = await supabase
-      .from("users")
-      .insert([{ email, display_name: name, short_name: shortName, role: "collaborator" }])
-      .select()
-      .single();
-    if (insErr) throw insErr;
+    if (!existing) {
+      return NextResponse.json(
+        { error: "This account isn't on the team yet. Ask an owner to add you." },
+        { status: 403 }
+      );
+    }
 
-    return NextResponse.json(created, { status: 201 });
+    // Backfill the avatar from Google if we don't have one (or it changed).
+    if (avatar_url && avatar_url !== existing.avatar_url) {
+      const { data: updated, error: updErr } = await supabase
+        .from("users")
+        .update({ avatar_url })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      if (!updErr && updated) return NextResponse.json(updated);
+    }
+
+    return NextResponse.json(existing);
   } catch (error) {
     const msg = (error as Error).message;
     console.error("User resolve error:", msg);

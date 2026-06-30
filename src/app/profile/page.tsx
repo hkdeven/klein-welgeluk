@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/Toast";
 
@@ -8,12 +8,29 @@ export default function ProfilePage() {
   const mockUser = useCurrentUser();
   const { signedIn, signOut } = useAuth();
   const toast = useToast();
+  const isOwner = mockUser.role === "owner";
   const [guestPass, setGuestPass] = useState("");
+  const [team, setTeam] = useState<any[]>([]);
+  const [invite, setInvite] = useState({ email: "", display_name: "", role: "collaborator" });
   const [notifications, setNotifications] = useState({
     mentioned: true,
     assigned: true,
     stage_moved: true,
   });
+
+  const loadTeam = async () => {
+    try {
+      const res = await fetch("/api/users");
+      const data = await res.json();
+      setTeam(data.users || []);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    if (isOwner) loadTeam();
+  }, [isOwner]);
 
   const setGuestPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +52,60 @@ export default function ProfilePage() {
     }
   };
 
+  const addMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invite.email.trim() || !invite.display_name.trim()) {
+      toast.error("Email and name are required");
+      return;
+    }
+    try {
+      const res = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: invite.email.trim(),
+          display_name: invite.display_name.trim(),
+          short_name: invite.display_name.trim().split(" ")[0],
+          role: invite.role,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add — is the email already on the team?");
+      setInvite({ email: "", display_name: "", role: "collaborator" });
+      await loadTeam();
+      toast.success("Team member added");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const changeRole = async (id: string, role: string) => {
+    try {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
+      });
+      if (!res.ok) throw new Error("Failed to update role");
+      setTeam((t) => t.map((u) => (u.id === id ? { ...u, role } : u)));
+      toast.success("Role updated");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const removeMember = async (id: string) => {
+    if (!confirm("Remove this person's access?")) return;
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to remove");
+      setTeam((t) => t.filter((u) => u.id !== id));
+      toast.success("Removed");
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   return (
     <>
       <div className="title-block">
@@ -48,8 +119,13 @@ export default function ProfilePage() {
           <div className="grid grid-cols-[200px_1fr] gap-9 mb-8">
             {/* Left: Avatar */}
             <div>
-              <div className="w-40 h-40 rounded-full bg-[#D6DCD3] flex items-center justify-center text-bottle font-fraunces text-[54px] mb-3.5">
-                {mockUser.short_name?.charAt(0).toUpperCase()}
+              <div className="w-40 h-40 rounded-full bg-[#D6DCD3] overflow-hidden flex items-center justify-center text-bottle font-fraunces text-[54px] mb-3.5">
+                {mockUser.avatar_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={mockUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  mockUser.short_name?.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="text-center text-[12px]">
                 <button className="text-sage underline">upload photo</button>
@@ -170,6 +246,92 @@ export default function ProfilePage() {
               </label>
             </div>
           </div>
+
+          {/* Team (owners only) */}
+          {isOwner && (
+            <div className="mb-8">
+              <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
+                Team
+                <span className="flex-1 h-px bg-[#E5E1D3]"></span>
+              </h2>
+              <p className="text-[12px] text-sage mb-3">
+                Invite-only. Add people by the email they&apos;ll sign in with (Google
+                or email/password). Only listed people can sign in.
+              </p>
+
+              <div className="space-y-2 mb-4">
+                {team.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex items-center gap-3 border border-[#ECE8DC] rounded p-2.5"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {u.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        (u.short_name?.charAt(0) || "?").toUpperCase()
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] text-pine font-medium truncate">
+                        {u.display_name}
+                      </div>
+                      <div className="text-[11px] text-sage truncate">{u.email}</div>
+                    </div>
+                    <select
+                      value={u.role === "owner" ? "owner" : "collaborator"}
+                      onChange={(e) => changeRole(u.id, e.target.value)}
+                      disabled={u.id === mockUser.id}
+                      className="border border-[#D7DECF] rounded px-2 py-1 text-[12px] text-sage"
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="collaborator">Collaborator</option>
+                    </select>
+                    {u.id !== mockUser.id && (
+                      <button
+                        onClick={() => removeMember(u.id)}
+                        className="text-mist hover:text-[#B5524F] text-[11px] underline flex-shrink-0"
+                      >
+                        remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <form onSubmit={addMember} className="flex flex-wrap gap-2 items-center bg-whitewash p-3 rounded">
+                <input
+                  type="email"
+                  value={invite.email}
+                  onChange={(e) => setInvite({ ...invite, email: e.target.value })}
+                  placeholder="email@example.com"
+                  className="flex-1 min-w-[180px] border border-[#D7DECF] rounded p-2 text-[13px]"
+                />
+                <input
+                  type="text"
+                  value={invite.display_name}
+                  onChange={(e) => setInvite({ ...invite, display_name: e.target.value })}
+                  placeholder="Full name"
+                  className="flex-1 min-w-[140px] border border-[#D7DECF] rounded p-2 text-[13px]"
+                />
+                <select
+                  value={invite.role}
+                  onChange={(e) => setInvite({ ...invite, role: e.target.value })}
+                  className="border border-[#D7DECF] rounded p-2 text-[13px] text-sage"
+                >
+                  <option value="collaborator">Collaborator</option>
+                  <option value="owner">Owner</option>
+                </select>
+                <button
+                  type="submit"
+                  className="bg-bottle text-white px-4 py-2 rounded text-[13px] font-medium hover:opacity-90"
+                >
+                  Add
+                </button>
+              </form>
+            </div>
+          )}
 
           {/* Guest access (owners only) */}
           {mockUser.role === "owner" && (

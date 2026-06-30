@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 export default function LoginPage() {
   const router = useRouter();
   const toast = useToast();
-  const { signedIn, signInWithGoogle, signInWithEmail, enterGuest } = useAuth();
+  const { signedIn, signInWithGoogle, signInWithEmail, enterGuest, authError } = useAuth();
   const [isGuest, setIsGuest] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,17 +52,24 @@ export default function LoginPage() {
       {!isGuest ? (
         <div className="login-card">
           <div className="text-center mb-6">
-            <h2 className="font-fraunces text-[24px] text-bottle font-medium mb-1">
-              Klein Welgeluk
-            </h2>
-            <small className="block font-sans text-[10px] tracking-[0.16em] uppercase text-sage font-normal mt-1">
-              build diary
-            </small>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/kw-crest.png"
+              alt="Klein Welgeluk"
+              className="mx-auto"
+              style={{ width: 132, height: 132, objectFit: "contain" }}
+            />
           </div>
 
           <h3 className="font-fraunces text-[17px] font-medium text-bottle text-center mb-3.5">
             Sign in
           </h3>
+
+          {authError && (
+            <div className="text-[12px] text-[#B5524F] bg-[#FBF3F3] border border-[#E2C9C9] rounded p-2 mb-3 text-center">
+              {authError}
+            </div>
+          )}
 
           <button className="sso-btn" onClick={signInWithGoogle}>
             <span className="w-[18px] h-[18px] flex items-center justify-center font-bold text-[#4285F4]">
@@ -110,12 +117,13 @@ export default function LoginPage() {
       ) : (
         <div className="login-card">
           <div className="text-center mb-6">
-            <h2 className="font-fraunces text-[24px] text-bottle font-medium mb-1">
-              Klein Welgeluk
-            </h2>
-            <small className="block font-sans text-[10px] tracking-[0.16em] uppercase text-sage font-normal mt-1">
-              build diary
-            </small>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/kw-crest.png"
+              alt="Klein Welgeluk"
+              className="mx-auto"
+              style={{ width: 132, height: 132, objectFit: "contain" }}
+            />
           </div>
 
           <h3 className="font-fraunces text-[17px] font-medium text-bottle text-center mb-3">
