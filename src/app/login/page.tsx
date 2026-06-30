@@ -54,10 +54,10 @@ export default function LoginPage() {
           <div className="text-center mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/kw-crest.png"
+              src="/login-logo.png"
               alt="Klein Welgeluk"
               className="mx-auto"
-              style={{ width: 132, height: 132, objectFit: "contain" }}
+              style={{ width: 300, maxWidth: "100%", height: "auto", objectFit: "contain" }}
             />
           </div>
 
@@ -119,10 +119,10 @@ export default function LoginPage() {
           <div className="text-center mb-6">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/kw-crest.png"
+              src="/login-logo.png"
               alt="Klein Welgeluk"
               className="mx-auto"
-              style={{ width: 132, height: 132, objectFit: "contain" }}
+              style={{ width: 300, maxWidth: "100%", height: "auto", objectFit: "contain" }}
             />
           </div>
 

@@ -3,14 +3,22 @@
 import { useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import DocUploadModal from "@/components/DocUploadModal";
+import PhotoUploadModal, {
+  PHOTO_CATEGORIES,
+  PHOTO_CATEGORY_LABELS,
+} from "@/components/PhotoUploadModal";
 import { useToast } from "@/components/Toast";
 import { useAuth } from "@/components/AuthProvider";
+import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
 
 const shortDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
+
+const photoUrlOf = (p: any) =>
+  p.external_url || storageUrl(`photos/${p.storage_path}`);
 
 interface PageMediaProps {
   pageId: string | null;
@@ -25,9 +33,8 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState("");
   const [photos, setPhotos] = useState<any[]>([]);
-  const [photoUrl, setPhotoUrl] = useState("");
-  const [photoCaption, setPhotoCaption] = useState("");
-  const [showLink, setShowLink] = useState(false);
+  const [photoFilter, setPhotoFilter] = useState("all");
+  const [photoModal, setPhotoModal] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [docModal, setDocModal] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; caption?: string } | null>(null);
@@ -89,50 +96,44 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
     }
   };
 
-  // ---- Photos ----
-  const uploadPhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !pageId) return;
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("page_id", pageId);
-      formData.append("uploaded_by", user.id);
-      formData.append("caption", photoCaption);
-      const res = await fetch("/api/photos/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to upload photo");
-      setPhotos([...photos, await res.json()]);
-      setPhotoCaption("");
-      e.target.value = "";
-      toast.success("Photo uploaded");
-    } catch (err) {
-      toast.error((err as Error).message);
+  // ---- Photos (browser → storage direct upload) ----
+  const uploadPhoto = async (file: File, category: string, description: string) => {
+    if (!pageId) throw new Error("No page");
+    const path = `photos/${pageId}/${Date.now()}_${sanitizeName(file.name)}`;
+    await uploadToStorage("photos", path, file);
+    const res = await fetch("/api/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page_id: pageId,
+        storage_path: path,
+        caption: description,
+        category,
+        uploaded_by: user.id,
+      }),
+    });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || "Could not save photo");
     }
+    return res.json();
   };
 
-  const addPhotoLink = async () => {
-    if (!pageId || !photoUrl.trim()) return;
-    try {
-      const res = await fetch("/api/photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          page_id: pageId,
-          external_url: photoUrl,
-          caption: photoCaption,
-          category: "inspiration",
-          uploaded_by: user.id,
-        }),
-      });
-      if (!res.ok) throw new Error("Failed to add photo");
-      setPhotos([...photos, await res.json()]);
-      setPhotoUrl("");
-      setPhotoCaption("");
-      setShowLink(false);
-      toast.success("Photo added");
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
+  const addPhotoUrl = async (url: string, category: string, description: string) => {
+    if (!pageId) throw new Error("No page");
+    const res = await fetch("/api/photos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        page_id: pageId,
+        external_url: url,
+        caption: description,
+        category,
+        uploaded_by: user.id,
+      }),
+    });
+    if (!res.ok) throw new Error("Could not add photo");
+    return res.json();
   };
 
   const deletePhoto = async (id: string) => {
@@ -174,6 +175,11 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       toast.error((err as Error).message);
     }
   };
+
+  const visiblePhotos =
+    photoFilter === "all"
+      ? photos
+      : photos.filter((p) => (p.category || "inspiration") === photoFilter);
 
   return (
     <>
@@ -218,46 +224,40 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       )}
 
       {/* Photos */}
-      <h2 className="section-h">Photo gallery</h2>
-      {canWrite && (
-        <div className="gallery-bar">
-          <input
-            value={photoCaption}
-            onChange={(e) => setPhotoCaption(e.target.value)}
-            placeholder="Photo description (optional)"
-            className="field-input"
-            style={{ marginBottom: 0, maxWidth: 320 }}
-          />
-          <div className="gallery-actions">
-            <label style={{ cursor: "pointer" }}>
-              + Upload
-              <input type="file" accept="image/*" onChange={uploadPhotoFile} className="hidden" />
-            </label>
-            <span style={{ cursor: "pointer" }} onClick={() => setShowLink((s) => !s)}>
-              + Add via link
-            </span>
-          </div>
-        </div>
-      )}
-      {canWrite && showLink && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <input
-            type="url"
-            value={photoUrl}
-            onChange={(e) => setPhotoUrl(e.target.value)}
-            placeholder="Image URL"
-            className="field-input"
-            style={{ marginBottom: 0 }}
-          />
-          <button className="post-btn" onClick={addPhotoLink}>
-            Add
+      <div className="gallery-bar">
+        <h2 className="section-h" style={{ margin: "34px 0 0", flex: "0 0 auto" }}>
+          Photo gallery
+        </h2>
+        {canWrite && (
+          <button className="post-btn" onClick={() => setPhotoModal(true)}>
+            + Add photos
           </button>
-        </div>
-      )}
-      {photos.length > 0 ? (
+        )}
+      </div>
+
+      <div className="pill-filters" style={{ margin: "0 0 14px" }}>
+        <span
+          className={photoFilter === "all" ? "active" : ""}
+          onClick={() => setPhotoFilter("all")}
+        >
+          All
+        </span>
+        {PHOTO_CATEGORIES.map((c) => (
+          <span
+            key={c}
+            className={photoFilter === c ? "active" : ""}
+            onClick={() => setPhotoFilter(c)}
+          >
+            {PHOTO_CATEGORY_LABELS[c]}
+          </span>
+        ))}
+      </div>
+
+      {visiblePhotos.length > 0 ? (
         <div className="masonry">
-          {photos.map((p: any) => {
-            const url = p.external_url || storageUrl(`photos/${p.storage_path}`);
+          {visiblePhotos.map((p: any) => {
+            const url = photoUrlOf(p);
+            const who = p.uploader?.short_name;
             return (
               <div
                 className="pin clickable"
@@ -265,7 +265,9 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
                 onClick={() => setLightbox({ url, caption: p.caption })}
               >
                 <img src={url} alt={p.caption || ""} />
-                {p.caption && <div className="caption">{p.caption}</div>}
+                {p.category && (
+                  <span className="tag">{PHOTO_CATEGORY_LABELS[p.category] || p.category}</span>
+                )}
                 {canWrite && (
                   <button
                     className="del-badge"
@@ -277,6 +279,16 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
                   >
                     ✕
                   </button>
+                )}
+                {(p.caption || who) && (
+                  <div className="caption">
+                    {p.caption}
+                    {who && (
+                      <span className="by">
+                        {p.caption ? ` — ${who}` : `added by ${who}`}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -342,6 +354,17 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         defaultCategory={defaultCategory}
         onClose={() => setDocModal(false)}
         onSubmit={submitDoc}
+      />
+
+      <PhotoUploadModal
+        open={photoModal}
+        onClose={() => setPhotoModal(false)}
+        uploadFile={uploadPhoto}
+        addUrl={addPhotoUrl}
+        onDone={(rows) => {
+          setPhotos((prev) => [...prev, ...rows]);
+          if (rows.length) toast.success(`Added ${rows.length} photo${rows.length === 1 ? "" : "s"}`);
+        }}
       />
 
       {lightbox && (

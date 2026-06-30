@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { useToast } from "@/components/Toast";
+import { uploadToStorage, publicUrl, sanitizeName } from "@/lib/upload";
 
 export default function ProfilePage() {
   const mockUser = useCurrentUser();
@@ -12,6 +13,8 @@ export default function ProfilePage() {
   const [guestPass, setGuestPass] = useState("");
   const [team, setTeam] = useState<any[]>([]);
   const [invite, setInvite] = useState({ email: "", display_name: "", role: "collaborator" });
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarRef = useRef<HTMLInputElement>(null);
   const [notifications, setNotifications] = useState({
     mentioned: true,
     assigned: true,
@@ -106,6 +109,43 @@ export default function ProfilePage() {
     }
   };
 
+  const uploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarBusy(true);
+    try {
+      const path = `avatars/${mockUser.id}_${Date.now()}_${sanitizeName(file.name)}`;
+      await uploadToStorage("photos", path, file);
+      const res = await fetch(`/api/users/${mockUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: publicUrl("photos", path) }),
+      });
+      if (!res.ok) throw new Error("Failed to save photo");
+      toast.success("Photo updated");
+      window.location.reload();
+    } catch (err) {
+      toast.error((err as Error).message);
+      setAvatarBusy(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarBusy(true);
+    try {
+      const res = await fetch(`/api/users/${mockUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ avatar_url: "" }),
+      });
+      if (!res.ok) throw new Error("Failed to remove photo");
+      window.location.reload();
+    } catch (err) {
+      toast.error((err as Error).message);
+      setAvatarBusy(false);
+    }
+  };
+
   return (
     <>
       <div className="title-block">
@@ -127,11 +167,37 @@ export default function ProfilePage() {
                   mockUser.short_name?.charAt(0).toUpperCase()
                 )}
               </div>
-              <div className="text-center text-[12px]">
-                <button className="text-sage underline">upload photo</button>
-                <span className="mx-1">·</span>
-                <button className="text-sage underline">remove</button>
-              </div>
+              {signedIn && (
+                <div className="text-center text-[12px]">
+                  {avatarBusy ? (
+                    <span className="text-sage">Uploading…</span>
+                  ) : (
+                    <>
+                      <button
+                        className="text-sage underline"
+                        onClick={() => avatarRef.current?.click()}
+                      >
+                        upload photo
+                      </button>
+                      {mockUser.avatar_url && (
+                        <>
+                          <span className="mx-1">·</span>
+                          <button className="text-sage underline" onClick={removeAvatar}>
+                            remove
+                          </button>
+                        </>
+                      )}
+                    </>
+                  )}
+                  <input
+                    ref={avatarRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={uploadAvatar}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Right: Fields */}

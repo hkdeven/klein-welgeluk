@@ -22,7 +22,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page_id = searchParams.get("page_id");
 
-    let query = supabase.from("photos").select("*");
+    let query = supabase
+      .from("photos")
+      .select("*, uploader:uploaded_by(short_name), page:page_id(title, slug)")
+      .order("created_at", { ascending: false });
 
     if (page_id) {
       query = query.eq("page_id", page_id);

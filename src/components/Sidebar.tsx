@@ -28,7 +28,7 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
   const activeSlug = decodeURIComponent((pathname || "").replace(/^\//, ""));
   const isActive = (slug: string) => activeSlug === slug;
 
-  const groups = pages.filter((p) => p.slug !== "overview");
+  const groups = pages.filter((p) => p.slug !== "overview" && p.slug !== "photos");
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [showAdd, setShowAdd] = useState(false);
@@ -163,6 +163,7 @@ export default function Sidebar({ pages, canCreate = true, editMode = false }: S
             { href: "/overview", label: "✦ Overview", slug: "overview" },
             { href: "/", label: "⌂ Home", slug: "" },
             { href: "/documents", label: "▤ Documents", slug: "documents" },
+            { href: "/photos", label: "▦ Photos", slug: "photos" },
             { href: "/calendar", label: "◫ Calendar", slug: "calendar" },
           ].map((l) => (
             <Link
