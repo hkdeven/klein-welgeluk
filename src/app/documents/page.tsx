@@ -22,7 +22,7 @@ export default function DocumentsPage() {
   const toast = useToast();
   const { editMode } = useEditMode();
   const mockUser = useCurrentUser();
-  const { canWrite } = useAuth();
+  const { canWrite, isGuest } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [documents, setDocuments] = useState<any[]>([]);
   const [pageId, setPageId] = useState<string | null>(null);
@@ -77,6 +77,19 @@ export default function DocumentsPage() {
       ? documents
       : documents.filter((d: any) => d.category === selectedFilter);
 
+  if (isGuest) {
+    return (
+      <>
+        <div className="title-block">
+          <h1>Documents</h1>
+        </div>
+        <p className="desc-text" style={{ color: "var(--mist)" }}>
+          Documents aren&apos;t available in guest view.
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="title-block">
@@ -86,13 +99,13 @@ export default function DocumentsPage() {
       {editMode && <EditBanner />}
 
           {/* Filter bar */}
-          <div className="flex justify-between items-center mb-[18px] gap-4">
-            <div className="flex gap-2">
+          <div className="flex justify-between items-center mb-[18px] gap-4 flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {FILTERS.map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}
-                  className={`px-[13px] py-1 text-[11.5px] rounded-full border ${
+                  className={`px-[13px] py-1 text-[11.5px] rounded-full border whitespace-nowrap ${
                     selectedFilter === filter
                       ? "bg-bottle text-white border-bottle"
                       : "border-[#E5E1D3] text-sage"

@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
           type: "event_tagged" as const,
           title: "You were tagged in an event",
           body: title,
-          link: "/calendar",
+          link: `/calendar?event=${newEvent.id}`,
           ref_id: newEvent.id,
         }))
       );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 
 interface Page {
   id: string;
@@ -86,6 +87,7 @@ function NavIcon({ name }: { name: string }) {
 export default function Sidebar({ pages, canCreate = true, editMode = false, refetch }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isGuest } = useAuth();
   const activeSlug = decodeURIComponent((pathname || "").replace(/^\//, ""));
   const isActive = (slug: string) => activeSlug === slug;
 
@@ -234,7 +236,9 @@ export default function Sidebar({ pages, canCreate = true, editMode = false, ref
             { href: "/documents", name: "documents", text: "Documents", slug: "documents" },
             { href: "/photos", name: "photos", text: "Photos", slug: "photos" },
             { href: "/calendar", name: "calendar", text: "Calendar", slug: "calendar" },
-          ].map((l) => (
+          ]
+            .filter((l) => !(isGuest && l.name === "documents"))
+            .map((l) => (
             <Link
               key={l.href}
               href={l.href}

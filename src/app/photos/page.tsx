@@ -122,16 +122,18 @@ export default function PhotosPage() {
         )}
       </div>
 
-      <div className="pill-filters" style={{ margin: "4px 0 18px" }}>
-        <span className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-          All
-        </span>
-        {photoCats.map((c) => (
-          <span key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
-            {labelFor(c)}
+      {photos.length > 0 && (
+        <div className="pill-filters" style={{ margin: "4px 0 18px" }}>
+          <span className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
+            All
           </span>
-        ))}
-      </div>
+          {photoCats.map((c) => (
+            <span key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
+              {labelFor(c)}
+            </span>
+          ))}
+        </div>
+      )}
 
       {visible.length > 0 ? (
         <div className="masonry">

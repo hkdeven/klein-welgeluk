@@ -75,7 +75,7 @@ export async function PATCH(
             type: "event_tagged" as const,
             title: "You were tagged in an event",
             body: data.title,
-            link: "/calendar",
+            link: `/calendar?event=${data.id}`,
             ref_id: data.id,
           }))
         );

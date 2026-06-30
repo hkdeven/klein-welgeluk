@@ -5,7 +5,7 @@ import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
 import EventDetailModal from "@/components/EventDetailModal";
 import { useEditMode } from "@/components/EditModeContext";
-import { useCurrentUser } from "@/components/AuthProvider";
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
 
 const storageUrl = (path: string) =>
@@ -61,6 +61,7 @@ export default function HomePage() {
   const { pages, loading } = usePages();
   const toast = useToast();
   const { editMode } = useEditMode();
+  const { isGuest } = useAuth();
   const mockUser = useCurrentUser();
   const [assigned, setAssigned] = useState<any[]>([]);
   const [tagsByPage, setTagsByPage] = useState<Record<string, any[]>>({});
@@ -291,7 +292,9 @@ export default function HomePage() {
 
           {editMode && <EditBanner />}
 
-          {/* Assigned to me */}
+          {/* Assigned to me (hidden for read-only guests) */}
+          {!isGuest && (
+            <>
           <h2 className="section-h">Assigned to me</h2>
           {assigned.length > 0 ? (
             <div className="sub-grid">
@@ -329,6 +332,8 @@ export default function HomePage() {
                 Nothing assigned to you right now
               </p>
             </div>
+          )}
+            </>
           )}
 
           {/* Upcoming events — events you're tagged in within the next 7 days */}

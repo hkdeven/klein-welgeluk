@@ -57,15 +57,25 @@ export default function RichTextEditor({
     onChange(ref.current?.innerHTML || "");
   };
 
+  // Text from the start of the editor up to the caret — works regardless of
+  // whether the caret sits in a text node or the editable element itself
+  // (the latter happens often on mobile and on the first character typed).
+  const textBeforeCaret = (caret: Range) => {
+    if (!ref.current) return "";
+    const pre = document.createRange();
+    pre.selectNodeContents(ref.current);
+    pre.setEnd(caret.endContainer, caret.endOffset);
+    return pre.toString();
+  };
+
   // Look at the caret; if it sits in a "@query" token, open the autocomplete.
   const checkMention = () => {
-    if (!mentionUsers || !mentionUsers.length) return setMention(null);
+    if (!mentionUsers || !mentionUsers.length || !ref.current) return setMention(null);
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount || !sel.isCollapsed) return setMention(null);
-    const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    if (node.nodeType !== Node.TEXT_NODE) return setMention(null);
-    const before = (node.textContent || "").slice(0, range.startOffset);
+    const caret = sel.getRangeAt(0);
+    if (!ref.current.contains(caret.endContainer)) return setMention(null);
+    const before = textBeforeCaret(caret);
     const m = before.match(/(^|\s)@(\w*)$/);
     if (!m) return setMention(null);
     const query = m[2].toLowerCase();
@@ -77,38 +87,37 @@ export default function RichTextEditor({
       )
       .slice(0, 6);
     if (!items.length) return setMention(null);
-    const rect = range.getBoundingClientRect();
-    const base = ref.current?.getBoundingClientRect();
+    const rect = caret.getBoundingClientRect();
+    const base = ref.current.getBoundingClientRect();
     setMention({
       items,
       index: 0,
-      top: (rect.bottom || base?.bottom || 0) + 4,
-      left: rect.left || base?.left || 0,
+      top: (rect.bottom || base.bottom) + 4,
+      left: rect.left || base.left,
     });
   };
 
   const insertMention = (user: MentionUser) => {
     const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return;
-    const range = sel.getRangeAt(0);
-    const node = range.startContainer;
-    const offset = range.startOffset;
-    const before = (node.textContent || "").slice(0, offset);
+    if (!sel || !sel.rangeCount || !ref.current) return;
+    const caret = sel.getRangeAt(0);
+    const before = textBeforeCaret(caret);
     const m = before.match(/@(\w*)$/);
     if (!m) return;
-    const start = offset - m[0].length;
-    const r = document.createRange();
-    r.setStart(node, start);
-    r.setEnd(node, offset);
-    r.deleteContents();
-    const tn = document.createTextNode(`@${user.short_name} `);
-    r.insertNode(tn);
-    r.setStartAfter(tn);
-    r.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(r);
+    const removeLen = m[0].length; // length of "@query"
+    // Select the "@query" right before the caret and replace it — using the
+    // Selection API so it works across text/element node boundaries.
+    for (let i = 0; i < removeLen; i++) {
+      (sel as Selection & { modify: (a: string, d: string, g: string) => void }).modify(
+        "extend",
+        "backward",
+        "character"
+      );
+    }
+    sel.deleteFromDocument();
+    document.execCommand("insertText", false, `@${user.short_name} `);
     setMention(null);
-    onChange(ref.current?.innerHTML || "");
+    onChange(ref.current.innerHTML || "");
   };
 
   const handleInput = () => {

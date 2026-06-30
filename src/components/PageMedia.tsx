@@ -256,23 +256,25 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         )}
       </div>
 
-      <div className="pill-filters" style={{ margin: "0 0 14px" }}>
-        <span
-          className={photoFilter === "all" ? "active" : ""}
-          onClick={() => setPhotoFilter("all")}
-        >
-          All
-        </span>
-        {photoCats.map((c) => (
+      {photos.length > 0 && (
+        <div className="pill-filters" style={{ margin: "0 0 14px" }}>
           <span
-            key={c}
-            className={photoFilter === c ? "active" : ""}
-            onClick={() => setPhotoFilter(c)}
+            className={photoFilter === "all" ? "active" : ""}
+            onClick={() => setPhotoFilter("all")}
           >
-            {labelFor(c)}
+            All
           </span>
-        ))}
-      </div>
+          {photoCats.map((c) => (
+            <span
+              key={c}
+              className={photoFilter === c ? "active" : ""}
+              onClick={() => setPhotoFilter(c)}
+            >
+              {labelFor(c)}
+            </span>
+          ))}
+        </div>
+      )}
 
       {visiblePhotos.length > 0 ? (
         <div className="masonry">
@@ -340,7 +342,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           <div className="comment-card">
             <div className="who">
               {c.author?.short_name || "Unknown"}
-              {canWrite && (
+              {canWrite && editMode && (
                 <button className="del" onClick={() => deleteComment(c.id)}>
                   delete
                 </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/Toast";
 import EditBanner from "@/components/EditBanner";
 import EventDetailModal from "@/components/EventDetailModal";
@@ -102,6 +102,20 @@ export default function CalendarPage() {
       .then((d) => setUsers(d.users || []))
       .catch(() => {});
   }, []);
+
+  // Arriving from a notification link (/calendar?event=<id>): open that event
+  // once events have loaded. Runs once.
+  const openedFromUrl = useRef(false);
+  useEffect(() => {
+    if (openedFromUrl.current || !events.length) return;
+    const id = new URLSearchParams(window.location.search).get("event");
+    if (!id) return;
+    const ev = events.find((e: any) => e.id === id);
+    if (ev) {
+      setSelectedEvent(ev);
+      openedFromUrl.current = true;
+    }
+  }, [events]);
 
   const toggleTagged = (id: string) =>
     setFormData((f) => ({
@@ -397,7 +411,7 @@ export default function CalendarPage() {
   };
 
   const renderYear = () => (
-    <div className="grid grid-cols-4 gap-5">
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
       {MONTHS.map((name, m) => {
         const cells: (number | null)[] = [];
         for (let i = 0; i < leadingBlanks(year, m); i++) cells.push(null);

@@ -12,11 +12,14 @@ export interface AppUser {
   email?: string;
 }
 
+// Placeholder used only in the brief window before auth resolves (AppFrame
+// renders nothing until signed in, so this id is never used for writes). Not a
+// real user id.
 const FALLBACK_USER: AppUser = {
-  id: "ddbabb8d-5d95-4b1d-8842-fd9fad9e50d6",
-  display_name: "Deven Blackburn",
-  short_name: "Deven",
-  role: "owner",
+  id: "",
+  display_name: "",
+  short_name: "",
+  role: "guest",
   avatar_url: null,
 };
 
