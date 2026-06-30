@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { persistSession: false },
+      // Bypass Next's fetch cache so activity always reflects current data.
+      global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+    })
   : null;
 
 // Related records come back as an object (to-one) — guard for array just in case.

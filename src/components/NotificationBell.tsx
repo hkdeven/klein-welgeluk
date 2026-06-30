@@ -112,7 +112,7 @@ export default function NotificationBell() {
         <>
           {/* click-away */}
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-2 w-80 max-h-[420px] overflow-y-auto bg-white border border-[#ECE8DC] rounded-lg shadow-[0_8px_30px_rgba(43,64,48,0.18)] z-50">
+          <div className="notif-panel absolute right-0 mt-2 w-80 max-h-[420px] overflow-y-auto bg-white border border-[#ECE8DC] rounded-lg shadow-[0_8px_30px_rgba(43,64,48,0.18)] z-50">
             <div className="px-4 py-2.5 border-b border-[#ECE8DC] text-[11px] tracking-[0.1em] uppercase text-sage">
               Notifications
             </div>

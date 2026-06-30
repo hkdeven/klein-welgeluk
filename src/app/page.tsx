@@ -280,10 +280,7 @@ export default function HomePage() {
             )}
           </div>
 
-          <p className="carousel-note">
-            Only Deven and Wernardt can add photos here{isOwner ? " (turn on edit mode)" : ""}.
-            Click any photo to view full size.
-          </p>
+          <p className="carousel-note">Click any photo to view full size.</p>
 
           <div className="title-block">
             <div>
