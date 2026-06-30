@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers, plainText, NotifInput } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -93,6 +94,51 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify: page assignees ("comment") and anyone @mentioned ("mention").
+    try {
+      const snippet = plainText(body).slice(0, 120);
+      const [pageRes, assignRes, usersRes] = await Promise.all([
+        supabase.from("pages").select("slug, title").eq("id", page_id).single(),
+        supabase.from("assignments").select("user_id").eq("page_id", page_id),
+        supabase.from("users").select("id, short_name"),
+      ]);
+      const slug = pageRes.data?.slug || "";
+      const link = `/${slug}#comments`;
+
+      // @mentions: match @token (case-insensitive) against users' short_name.
+      const text = plainText(body);
+      const tokens = new Set(
+        (text.match(/@([a-z0-9_]+)/gi) || []).map((t) => t.slice(1).toLowerCase())
+      );
+      const mentioned = new Set(
+        (usersRes.data || [])
+          .filter((u: any) => u.short_name && tokens.has(u.short_name.toLowerCase()))
+          .map((u: any) => u.id as string)
+      );
+
+      const assignees = (assignRes.data || []).map((a: any) => a.user_id as string);
+      const recipients = new Set<string>([...assignees, ...mentioned]);
+      recipients.delete(author_id);
+
+      const notifs: NotifInput[] = [...recipients].map((uid) => {
+        const isMention = mentioned.has(uid);
+        return {
+          user_id: uid,
+          actor_id: author_id,
+          type: isMention ? "mention" : "comment",
+          title: isMention
+            ? "You were mentioned in a comment"
+            : `New comment on ${pageRes.data?.title || "a page"}`,
+          body: snippet,
+          link,
+          ref_id: newComment.id,
+        };
+      });
+      await notifyUsers(notifs);
+    } catch (e) {
+      console.error("Comment notify error:", (e as Error).message);
+    }
 
     return NextResponse.json(newComment, { status: 201 });
   } catch (error) {

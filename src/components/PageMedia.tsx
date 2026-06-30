@@ -40,6 +40,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   const [documents, setDocuments] = useState<any[]>([]);
   const [docModal, setDocModal] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; caption?: string } | null>(null);
+  const [mentionUsers, setMentionUsers] = useState<any[]>([]);
 
   const loadDocuments = async (id: string) => {
     const d = await fetch(`/api/documents?page_id=${id}`).then((r) => r.json());
@@ -60,6 +61,13 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         setComments(c.comments || []);
         setPhotos(p.photos || []);
         setDocuments(d.documents || []);
+        // If we arrived via a notification link (#comments), scroll there once loaded.
+        if (window.location.hash === "#comments") {
+          setTimeout(
+            () => document.getElementById("comments")?.scrollIntoView({ behavior: "smooth" }),
+            250
+          );
+        }
       } catch {
         /* ignore */
       }
@@ -68,6 +76,14 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       active = false;
     };
   }, [pageId]);
+
+  // Team list for @mention autocomplete in the comment editor.
+  useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((d) => setMentionUsers(d.users || []))
+      .catch(() => {});
+  }, []);
 
   // ---- Comments ----
   const addComment = async (e: React.FormEvent) => {
@@ -339,8 +355,9 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           <RichTextEditor
             value={newComment}
             onChange={setNewComment}
-            placeholder="Add a comment..."
+            placeholder="Add a comment... (type @ to mention)"
             minHeight={70}
+            mentionUsers={mentionUsers}
           />
           <button type="submit" className="post-btn" style={{ marginTop: 10 }}>
             Post

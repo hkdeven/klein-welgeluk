@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,15 @@ export async function PATCH(
     }
 
     const body = await request.json();
+
+    // Snapshot current tags/creator so we can notify only the newly-added people.
+    const { data: before } = await supabase
+      .from("calendar_events")
+      .select("tagged_user_ids, created_by")
+      .eq("id", params.id)
+      .single();
+    const prevTags: string[] = before?.tagged_user_ids || [];
+
     const patch: Record<string, unknown> = {};
     for (const key of [
       "title",
@@ -51,6 +61,26 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
+
+    // Notify people newly tagged by this edit (author edits their own event).
+    if (Array.isArray(data?.tagged_user_ids)) {
+      const added = (data.tagged_user_ids as string[]).filter(
+        (id) => !prevTags.includes(id)
+      );
+      if (added.length) {
+        await notifyUsers(
+          added.map((uid) => ({
+            user_id: uid,
+            actor_id: before?.created_by || data.created_by,
+            type: "event_tagged" as const,
+            title: "You were tagged in an event",
+            body: data.title,
+            link: "/calendar",
+            ref_id: data.id,
+          }))
+        );
+      }
+    }
 
     return NextResponse.json(data, { status: 200 });
   } catch (error) {

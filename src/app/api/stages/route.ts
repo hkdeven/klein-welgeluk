@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -85,13 +86,13 @@ export async function PATCH(request: NextRequest) {
     if (!supabase) {
       return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
     }
-    const { page_id, current_id } = await request.json();
+    const { page_id, current_id, moved_by } = await request.json();
     if (!page_id || !current_id) {
       return NextResponse.json({ error: "page_id and current_id are required" }, { status: 400 });
     }
     const { data: stages, error: selErr } = await supabase
       .from("stages")
-      .select("id, sort_order")
+      .select("id, sort_order, name")
       .eq("page_id", page_id);
     if (selErr) throw selErr;
 
@@ -107,6 +108,27 @@ export async function PATCH(request: NextRequest) {
         })
         .eq("id", s.id);
     }
+
+    // Notify the page's assignees that its stage moved (except whoever moved it).
+    try {
+      const [pageRes, assignRes] = await Promise.all([
+        supabase.from("pages").select("slug, title").eq("id", page_id).single(),
+        supabase.from("assignments").select("user_id").eq("page_id", page_id),
+      ]);
+      const notifs = (assignRes.data || []).map((a: any) => ({
+        user_id: a.user_id as string,
+        actor_id: moved_by || null,
+        type: "stage_moved" as const,
+        title: `Stage moved to ${cur.name}`,
+        body: pageRes.data?.title || "",
+        link: `/${pageRes.data?.slug || ""}`,
+        ref_id: page_id,
+      }));
+      await notifyUsers(notifs);
+    } catch (e) {
+      console.error("Stage notify error:", (e as Error).message);
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 500 });

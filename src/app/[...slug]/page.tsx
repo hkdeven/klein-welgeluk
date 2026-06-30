@@ -213,7 +213,7 @@ export default function DynamicPage() {
       const res = await fetch("/api/stages", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: pageId, current_id: stageId }),
+        body: JSON.stringify({ page_id: pageId, current_id: stageId, moved_by: mockUser.id }),
       });
       if (!res.ok) throw new Error("Failed to update status");
       const s = await fetch(`/api/stages?page_id=${pageId}`).then((r) => r.json());

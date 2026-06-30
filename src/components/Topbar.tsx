@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import NotificationBell from "@/components/NotificationBell";
 
 interface TopbarProps {
   user: {
@@ -30,6 +31,7 @@ export default function Topbar({
         )}
       </div>
       <div className="flex items-center gap-[14px]">
+        <NotificationBell />
         {onEditModeChange && (
           <button
             onClick={() => onEditModeChange(!editMode)}

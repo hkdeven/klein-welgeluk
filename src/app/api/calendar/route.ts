@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +141,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: `Database error: ${error.message}` },
         { status: 500 }
+      );
+    }
+
+    // Notify everyone tagged in the new event (except the creator).
+    if (Array.isArray(tagged_user_ids) && tagged_user_ids.length) {
+      await notifyUsers(
+        tagged_user_ids.map((uid: string) => ({
+          user_id: uid,
+          actor_id: created_by,
+          type: "event_tagged" as const,
+          title: "You were tagged in an event",
+          body: title,
+          link: "/calendar",
+          ref_id: newEvent.id,
+        }))
       );
     }
 
