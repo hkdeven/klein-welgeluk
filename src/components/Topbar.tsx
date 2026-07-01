@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import NotificationBell from "@/components/NotificationBell";
+import { useAuth } from "@/components/AuthProvider";
 
 interface TopbarProps {
   user: {
@@ -19,6 +20,7 @@ export default function Topbar({
   onEditModeChange,
   onMenuClick,
 }: TopbarProps) {
+  const { isGuest, signOut } = useAuth();
   return (
     <div className="topbar sticky top-0 z-40 bg-[#5c7a5e1f] border-b border-[#5c7a5e52]">
       {/* Always-present left slot so justify-between keeps controls on the right;
@@ -45,20 +47,41 @@ export default function Topbar({
             <span>{editMode ? "on" : "off"}</span>
           </button>
         )}
-        <Link
-          href="/profile"
-          className="flex items-center gap-2 cursor-pointer hover:opacity-80"
-        >
-          <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden">
-            {user.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              user.short_name?.charAt(0).toUpperCase()
-            )}
+        {isGuest ? (
+          // Guests have no profile page — show a plain label + a sign-out button.
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden">
+              {user.short_name?.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-sage text-[12px]">{user.short_name}</span>
+            <button
+              onClick={signOut}
+              className="text-bottle underline text-[12px] ml-1"
+            >
+              Sign out
+            </button>
           </div>
-          <span className="text-sage text-[12px]">{user.short_name}</span>
-        </Link>
+        ) : (
+          <Link
+            href="/profile"
+            className="flex items-center gap-2 cursor-pointer hover:opacity-80"
+          >
+            <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden">
+              {user.avatar_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.avatar_url}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                user.short_name?.charAt(0).toUpperCase()
+              )}
+            </div>
+            <span className="text-sage text-[12px]">{user.short_name}</span>
+          </Link>
+        )}
       </div>
     </div>
   );

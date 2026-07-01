@@ -11,6 +11,27 @@ const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } })
   : null;
 
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+    }
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .eq("id", params.id)
+      .single();
+    if (error) throw error;
+    return NextResponse.json(data);
+  } catch (error) {
+    const msg = (error as Error).message;
+    return NextResponse.json({ error: `Fetch error: ${msg}` }, { status: 500 });
+  }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }

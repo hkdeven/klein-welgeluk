@@ -463,6 +463,100 @@ main {
   font-family: 'IBM Plex Mono', monospace;
   white-space: nowrap; flex: 0 0 auto;
 }
+/* ---- Photo reactions (in the photo detail panel) ---- */
+.photo-reactions {
+  display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start;
+  margin-top: 4px;
+}
+.react-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #F1EFE8; border: 1px solid #E5E1D3;
+  color: #1E2B1F; border-radius: 20px; padding: 3px 10px; font-size: 14px; cursor: pointer;
+}
+.react-chip.mine { background: #F3E4CC; border-color: #E3CDA6; }
+.react-chip .cnt { font-size: 12px; font-family: 'IBM Plex Mono', monospace; }
+.react-add-wrap { position: relative; }
+.react-add {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 28px; border-radius: 20px; cursor: pointer;
+  background: #fff; border: 1px solid #D7DECF; color: #5C7A5E;
+  position: relative;
+}
+.react-add .plus { position: absolute; top: 1px; right: 4px; font-size: 11px; font-weight: 600; }
+.react-picker {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  width: 268px; max-height: 240px; overflow-y: auto;
+  background: #fff; border: 1px solid #ECE8DC; border-radius: 10px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.35); padding: 8px; z-index: 10;
+}
+.react-picker .quick {
+  display: flex; gap: 4px; justify-content: space-between;
+  padding-bottom: 8px; margin-bottom: 6px; border-bottom: 1px solid #ECE8DC;
+}
+.react-picker .lib { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.react-picker button {
+  background: none; border: none; cursor: pointer; font-size: 19px;
+  padding: 3px; border-radius: 6px; line-height: 1;
+}
+.react-picker button:hover { background: #F1EFE8; }
+
+/* ---- Instagram-style photo detail modal ---- */
+.pm-overlay {
+  position: fixed; inset: 0; z-index: 1100;
+  background: rgba(20, 28, 20, 0.86);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.pm-modal {
+  position: relative; display: flex; background: #fff; border-radius: 10px; overflow: hidden;
+  width: min(920px, 96vw); max-height: 90vh;
+}
+.pm-close {
+  position: absolute; top: 10px; right: 12px; z-index: 5;
+  background: rgba(0, 0, 0, 0.4); color: #fff; border: none; border-radius: 50%;
+  width: 28px; height: 28px; cursor: pointer; font-size: 13px;
+}
+.pm-image { flex: 1.2; background: #14180f; display: flex; align-items: center; justify-content: center; min-width: 0; }
+.pm-image img { max-width: 100%; max-height: 90vh; object-fit: contain; display: block; }
+.pm-panel { width: 330px; flex: none; display: flex; flex-direction: column; max-height: 90vh; border-left: 1px solid #ECE8DC; }
+.pm-head { display: flex; align-items: center; gap: 9px; padding: 13px 14px; border-bottom: 1px solid #F2EFE6; }
+.pm-name { font-size: 13px; font-weight: 600; color: #1E2B1F; }
+.pm-date { font-size: 10.5px; color: #9CA89C; }
+.pm-cat { margin-left: auto; color: #6E4E22; background: #F3E4CC; border: 1px solid #E3CDA6; border-radius: 3px; padding: 1px 7px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; }
+.pm-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+.pm-caption { font-size: 13px; line-height: 1.5; margin-bottom: 12px; }
+.pm-edit { margin-left: 6px; background: none; border: none; color: #5C7A5E; font-size: 11px; text-decoration: underline; cursor: pointer; }
+.pm-caption-edit textarea { width: 100%; border: 1px solid #D7DECF; border-radius: 4px; padding: 8px; font-size: 13px; font-family: inherit; resize: vertical; }
+.pm-caption-actions { display: flex; align-items: center; gap: 8px; margin: 8px 0 12px; }
+.pm-save { background: #2F4030; color: #fff; border: none; border-radius: 4px; padding: 5px 14px; font-size: 12px; cursor: pointer; }
+.pm-cancel { background: none; border: none; color: #9CA89C; font-size: 12px; cursor: pointer; }
+.pm-comments { margin-top: 14px; border-top: 1px solid #F2EFE6; padding-top: 12px; }
+.pm-empty { font-size: 12.5px; color: #9CA89C; }
+.pm-comment { display: flex; gap: 8px; margin-bottom: 11px; }
+.pm-comment-text { font-size: 12.5px; line-height: 1.45; color: #1E2B1F; }
+.pm-comment-when { display: block; font-size: 10.5px; color: #9CA89C; margin-top: 2px; }
+.pm-reactions-bar { border-top: 1px solid #F2EFE6; padding: 8px 12px 4px; }
+.pm-footer { display: flex; align-items: center; gap: 8px; border-top: 1px solid #F2EFE6; padding: 10px 12px; }
+.pm-footer input { flex: 1; min-width: 0; border: none; font-size: 12.5px; outline: none; background: none; color: #1E2B1F; }
+.pm-footer button { border: none; background: none; color: #5C7A5E; font-weight: 600; font-size: 12.5px; cursor: pointer; }
+.pm-footer button:disabled { color: #C7CEC0; cursor: default; }
+.pm-footer-note { color: #9CA89C; font-size: 12px; justify-content: center; }
+
+@media (max-width: 640px) {
+  .pm-overlay { padding: 0; }
+  .pm-modal { flex-direction: column; width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
+  .pm-image { flex: none; max-height: 46vh; }
+  .pm-image img { max-height: 46vh; }
+  .pm-panel { width: 100%; flex: 1; max-height: none; border-left: none; border-top: 1px solid #ECE8DC; min-height: 0; }
+}
+
+/* Photo grid card footer strip (always shown — carries the author) + counts. */
+.pin .pin-strip {
+  background: #1E2B1F; color: #fff; padding: 7px 10px;
+}
+.pin .pin-strip .cap { font-size: 11.5px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pin .pin-strip .meta { font-size: 10.5px; color: rgba(255,255,255,0.72); margin-top: 3px; display: flex; gap: 12px; }
+.pin .pin-count { position: absolute; top: 8px; right: 8px; z-index: 1; background: rgba(20,28,20,0.55); color: #fff; font-size: 11px; padding: 2px 8px; border-radius: 20px; }
+
 /* Brass-tinted tag, used on sub-page cards (parent page + home). Muted, legible. */
 .card-tag {
   display: inline-flex;
@@ -506,20 +600,71 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 .desc-text { font-size: 14.5px; line-height: 1.6; color: var(--pine); max-width: 640px; }
 
 /* Costing */
+/* Collapsible sections — milestones, decision log */
+.fold { border: 1px solid #ECE8DC; border-radius: 6px; margin: 24px 0; background: #fff; }
+.fold-head { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; }
+.fold-head .chev { color: #9CA89C; font-size: 12px; }
+.fold-title { font-family: 'Fraunces', serif; font-size: 14.5px; font-weight: 500; color: var(--bottle); }
+.fold-count { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--brass); background: var(--brass-bg); border: 1px solid #E8D9C2; border-radius: 20px; padding: 1px 9px; }
+.fold-lock { margin-left: auto; font-size: 10.5px; color: #9CA89C; background: #fff; border: 1px solid #ECE8DC; padding: 2px 9px; border-radius: 20px; }
+.fold-body { padding: 2px 16px 16px; }
+.fold-add { margin-top: 12px; background: none; border: none; color: var(--sage); font-size: 12px; text-decoration: underline; cursor: pointer; padding: 0; }
+.fold-form { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+.fold-form input, .fold-form textarea { border: 1px solid #D7DECF; border-radius: 4px; padding: 7px 9px; font-size: 12.5px; font-family: inherit; }
+.fold-form .save { background: var(--bottle); color: #fff; border: none; border-radius: 4px; padding: 7px 14px; font-size: 12px; cursor: pointer; }
+.fold-form .cancel { background: none; border: none; color: var(--mist); font-size: 12px; cursor: pointer; }
+.fold-empty { font-size: 12.5px; color: var(--mist); }
+
+.ms-line { position: relative; padding-left: 20px; }
+.ms-line::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 22px; width: 2px; background: #ECE8DC; }
+.ms-row { position: relative; display: flex; align-items: baseline; gap: 10px; padding: 6px 0; }
+.ms-row .dot { position: absolute; left: -15px; top: 6px; width: 10px; height: 10px; border-radius: 50%; }
+.ms-row .date { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9CA89C; width: auto; min-width: 84px; flex: none; white-space: nowrap; }
+.ms-modes { display: inline-flex; gap: 2px; border: 1px solid #E5E1D3; border-radius: 20px; padding: 2px; align-self: flex-start; }
+.ms-modes button { border: none; background: none; padding: 4px 12px; font-size: 11.5px; border-radius: 20px; color: var(--sage); cursor: pointer; }
+.ms-modes button.active { background: var(--bottle); color: #fff; }
+.ms-row .label { font-size: 13.5px; flex: 1; color: var(--pine); }
+.ms-row .status { font-size: 10.5px; border-radius: 20px; padding: 1px 9px; flex: none; }
+.ms-del, .dec-del { background: none; border: none; color: var(--mist); cursor: pointer; font-size: 12px; flex: none; }
+
+.dec-row { border-left: 2px solid #E8D9C2; padding-left: 12px; margin-bottom: 12px; display: flex; gap: 8px; }
+.dec-row .body { flex: 1; min-width: 0; }
+.dec-row .d-title { font-size: 13.5px; color: var(--pine); }
+.dec-row .d-detail { font-size: 12px; color: var(--sage); margin-top: 2px; line-height: 1.45; }
+.dec-row .d-meta { font-size: 11px; color: #9CA89C; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.snag-row { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid #F2EFE6; }
+.snag-row input[type="checkbox"] { flex: none; }
+.snag-row .txt { flex: 1; min-width: 0; font-size: 13.5px; color: var(--pine); line-height: 1.4; }
+.snag-row .txt.done { color: var(--mist); text-decoration: line-through; }
+.snag-row .txt small { font-size: 12px; color: var(--sage); text-decoration: none; }
+.snag-row .txt .fixed-meta { font-style: normal; font-size: 11px; color: var(--mist); text-decoration: none; }
+.snag-thumb { flex: none; width: 30px; height: 30px; border-radius: 4px; overflow: hidden; display: block; padding: 0; cursor: pointer; border: 1px solid #C7CEC0; background: #FAF9F5; }
+.snag-thumb:hover { border-color: var(--sage); }
+.snag-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.snag-cam { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 24px; border: 1px solid #D7DECF; border-radius: 4px; color: var(--sage); cursor: pointer; }
+.snag-cam:hover { border-color: var(--sage); }
+
+/* Push the sub-page decision log down from the comments, and let costing sit
+   close beneath it. */
+.fold.sub-decisions { margin-top: 48px; margin-bottom: 0; }
+
+/* Costing now matches the fold sections (white, hairline border). */
 .costing {
-  border: 1px solid #E8D9C2; background: var(--brass-bg);
-  border-radius: 3px; margin: 60px 0 20px;
+  border: 1px solid #ECE8DC; background: #fff;
+  border-radius: 6px; margin: 14px 0 20px;
 }
 .costing-head {
   display: flex; align-items: center; gap: 10px;
-  padding: 13px 18px; color: var(--brass);
+  padding: 12px 16px; color: var(--bottle); cursor: pointer;
   font-family: 'Fraunces', serif; font-size: 14.5px; font-weight: 500;
 }
+.costing-head .chev { color: #9CA89C; font-size: 12px; }
 .costing-head .lock {
-  margin-left: auto; font-size: 10.5px; color: #8a6a3f;
-  background: #fff; border: 1px solid #E8D9C2; padding: 2px 9px; border-radius: 20px;
+  margin-left: auto; font-size: 10.5px; color: #9CA89C;
+  background: #fff; border: 1px solid #ECE8DC; padding: 2px 9px; border-radius: 20px;
 }
-.costing-body { padding: 4px 18px 18px; }
+.costing-body { padding: 2px 16px 16px; }
 .costing-field {
   display: flex; align-items: baseline; gap: 14px;
   padding: 8px 0; border-bottom: 1px solid #F0E4D2;
@@ -762,6 +907,10 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   color: #fff; font-size: 12.5px; background: rgba(0,0,0,0.45);
   padding: 6px 14px; border-radius: 20px;
 }
+/* When the lightbox stacks image + caption + reactions, keep it all on screen. */
+.lightbox .lb-inner { cursor: default; max-width: 92vw; }
+.lightbox .lb-inner img { max-height: 78vh; }
+.lightbox .lb-inner .lb-cap { position: static; transform: none; }
 
 /* ===== Tiny delete badge (assignee-style, not red) ===== */
 .del-badge {
@@ -846,8 +995,6 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   /* Costing fields stack so the label + value don't overflow the screen. */
   .costing-field { flex-wrap: wrap; gap: 2px 10px; }
   .costing-field label { width: 100%; }
-  /* Keep the top gap tighter on phones (desktop uses 60px). */
-  .costing { margin-top: 30px; }
 
   /* On phones tags flow in normal order (below the status) and align left,
      so they can't overflow off the card. */

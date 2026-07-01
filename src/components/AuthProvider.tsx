@@ -23,8 +23,9 @@ const FALLBACK_USER: AppUser = {
   avatar_url: null,
 };
 
+// Real "Guest" user row so guest uploads attribute to a valid UUID.
 const GUEST_USER: AppUser = {
-  id: "guest",
+  id: "7580500e-ff3c-4215-ae23-67d4be22dc99",
   display_name: "Guest",
   short_name: "Guest",
   role: "guest",
@@ -38,6 +39,8 @@ interface AuthValue {
   signedIn: boolean;
   isGuest: boolean;
   canWrite: boolean;
+  // Guests can upload photos/documents (but not delete/comment/edit).
+  canUpload: boolean;
   loading: boolean;
   authError: string | null;
   signInWithGoogle: () => void;
@@ -53,6 +56,7 @@ const AuthContext = createContext<AuthValue>({
   signedIn: false,
   isGuest: false,
   canWrite: false,
+  canUpload: false,
   loading: true,
   authError: null,
   signInWithGoogle: () => {},
@@ -171,6 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signedIn,
         isGuest,
         canWrite: signedIn,
+        canUpload: signedIn || isGuest,
         loading,
         authError,
         signInWithGoogle,

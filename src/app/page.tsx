@@ -57,6 +57,87 @@ const eventTypeClass = (t: string) =>
     ? "bg-[#FBF3E9] text-brass"
     : "bg-[#EBD4D4] text-[#7A3B3B]";
 
+// Colored icon chip per activity type for the Recent activity feed.
+const ACTIVITY_STYLE: Record<string, { bg: string; fg: string }> = {
+  comment: { bg: "#E3ECE0", fg: "#3D5A3F" },
+  photo: { bg: "#F3E4CC", fg: "#6E4E22" },
+  document: { bg: "#DCE6EE", fg: "#2F4A63" },
+  event: { bg: "#E7E0EE", fg: "#4E3A63" },
+  page: { bg: "#D8E9E6", fg: "#2E5852" },
+};
+
+function ActivityChip({ type }: { type: string }) {
+  const s = ACTIVITY_STYLE[type] || { bg: "#F1EFE8", fg: "#5F5E5A" };
+  const p = {
+    width: 14,
+    height: 14,
+    viewBox: "0 0 20 20",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.6,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  let icon;
+  switch (type) {
+    case "comment":
+      icon = (
+        <svg {...p}>
+          <path d="M4 5.5h12v7H8.5L5 15.5V12.5H4z" />
+        </svg>
+      );
+      break;
+    case "photo":
+      icon = (
+        <svg {...p}>
+          <rect x="3" y="6" width="14" height="10" rx="2" />
+          <circle cx="10" cy="11" r="2.4" />
+          <path d="M7.5 6l1.2-1.8h2.6L12.5 6" />
+        </svg>
+      );
+      break;
+    case "document":
+      icon = (
+        <svg {...p}>
+          <path d="M6 3h5.5L15 6.5V17H6z" />
+          <path d="M11.5 3v3.5H15" />
+        </svg>
+      );
+      break;
+    case "event":
+      icon = (
+        <svg {...p}>
+          <rect x="3.5" y="4.5" width="13" height="12" rx="1.5" />
+          <path d="M3.5 8.2h13M7 3v3M13 3v3" />
+        </svg>
+      );
+      break;
+    default:
+      icon = (
+        <svg {...p}>
+          <path d="M10 5v10M5 10h10" />
+        </svg>
+      );
+  }
+  return (
+    <span
+      style={{
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        background: s.bg,
+        color: s.fg,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flex: "none",
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
+
 
 export default function HomePage() {
   const { pages, loading } = usePages();
@@ -92,6 +173,16 @@ export default function HomePage() {
       toast.success("Activity removed");
     } catch (e) {
       toast.error((e as Error).message);
+    }
+  };
+
+  // Open a calendar event (from the activity feed) in the popup, not the calendar page.
+  const openEventFromActivity = async (refId: string) => {
+    try {
+      const ev = await fetch(`/api/calendar/${refId}`).then((r) => r.json());
+      if (ev && ev.id) setSelectedEvent(ev);
+    } catch {
+      /* ignore */
     }
   };
   const [slideIndex, setSlideIndex] = useState(0);
@@ -287,7 +378,11 @@ export default function HomePage() {
           <div className="title-block">
             <div>
               <h1>Home</h1>
-              <div className="title-meta">Welcome back, {mockUser.short_name}</div>
+              <div className="title-meta">
+                {isGuest
+                  ? "Make yourself at home — we're still building it."
+                  : `Welcome back, ${mockUser.short_name}`}
+              </div>
             </div>
           </div>
 
@@ -385,8 +480,12 @@ export default function HomePage() {
               <>
                 <ul>
                   {activity.slice(0, activityShown).map((a) => (
-                    <li key={a.id} style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                      <span style={{ flex: 1 }}>
+                    <li
+                      key={a.id}
+                      style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "5px 0" }}
+                    >
+                      <ActivityChip type={a.type} />
+                      <span style={{ flex: 1, lineHeight: 1.45, paddingTop: 1 }}>
                         {a.who && <b>{a.who}</b>} {a.action}{" "}
                         {a.slug ? (
                           <a
@@ -395,12 +494,23 @@ export default function HomePage() {
                           >
                             {a.target}
                           </a>
+                        ) : a.type === "event" ? (
+                          <button
+                            onClick={() => openEventFromActivity(a.refId)}
+                            style={{
+                              color: "var(--sage)",
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {a.target}
+                          </button>
                         ) : (
                           <b>{a.target}</b>
                         )}
                         <span className="when">{timeAgo(a.when)}</span>
                       </span>
-                      {isOwner && a.type !== "page" && (
+                      {isOwner && editMode && a.type !== "page" && (
                         <span className="del-badge" onClick={() => deleteActivity(a)}>
                           ✕
                         </span>

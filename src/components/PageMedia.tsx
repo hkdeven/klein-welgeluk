@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import DocUploadModal from "@/components/DocUploadModal";
 import PhotoUploadModal, {
@@ -8,8 +8,9 @@ import PhotoUploadModal, {
   labelFor,
 } from "@/components/PhotoUploadModal";
 import { useToast } from "@/components/Toast";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth, useCurrentUser } from "@/components/AuthProvider";
 import { useEditMode } from "@/components/EditModeContext";
+import PhotoModal from "@/components/PhotoModal";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
 const storageUrl = (path: string) =>
@@ -29,7 +30,9 @@ interface PageMediaProps {
 
 export default function PageMedia({ pageId, user, defaultCategory }: PageMediaProps) {
   const toast = useToast();
-  const { canWrite } = useAuth();
+  const { canWrite, canUpload } = useAuth();
+  const me = useCurrentUser();
+  const isOwner = me.role === "owner";
   const { editMode } = useEditMode();
 
   const [comments, setComments] = useState<any[]>([]);
@@ -39,7 +42,9 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   const [photoModal, setPhotoModal] = useState(false);
   const [documents, setDocuments] = useState<any[]>([]);
   const [docModal, setDocModal] = useState(false);
-  const [lightbox, setLightbox] = useState<{ url: string; caption?: string } | null>(null);
+  const [modalPhoto, setModalPhoto] = useState<any | null>(null);
+  const [reactionInfo, setReactionInfo] = useState<Record<string, { total: number; top: string }>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [mentionUsers, setMentionUsers] = useState<any[]>([]);
 
   const loadDocuments = async (id: string) => {
@@ -84,6 +89,48 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       .then((d) => setMentionUsers(d.users || []))
       .catch(() => {});
   }, []);
+
+  // Reaction + comment counts for the whole gallery, for the grid strips.
+  const loadCounts = useCallback(() => {
+    const ids = photos.map((p) => p.id);
+    if (!ids.length) {
+      setReactionInfo({});
+      setCommentCounts({});
+      return;
+    }
+    const q = ids.join(",");
+    fetch(`/api/reactions?photo_ids=${q}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const acc: Record<string, { total: number; counts: Record<string, number> }> = {};
+        (d.reactions || []).forEach((r: any) => {
+          const e = acc[r.photo_id] || (acc[r.photo_id] = { total: 0, counts: {} });
+          e.total++;
+          e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+        });
+        const out: Record<string, { total: number; top: string }> = {};
+        Object.entries(acc).forEach(([pid, e]) => {
+          const top = Object.entries(e.counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+          out[pid] = { total: e.total, top };
+        });
+        setReactionInfo(out);
+      })
+      .catch(() => {});
+    fetch(`/api/comments?photo_ids=${q}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const cc: Record<string, number> = {};
+        (d.comments || []).forEach((c: any) => {
+          if (c.photo_id) cc[c.photo_id] = (cc[c.photo_id] || 0) + 1;
+        });
+        setCommentCounts(cc);
+      })
+      .catch(() => {});
+  }, [photos]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
 
   // ---- Comments ----
   const addComment = async (e: React.FormEvent) => {
@@ -209,7 +256,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         <h2 className="section-h" style={{ margin: "34px 0 0", flex: "0 0 auto" }}>
           Documents
         </h2>
-        {canWrite && (
+        {canUpload && (
           <button className="add-mini" onClick={() => setDocModal(true)}>
             + Add document
           </button>
@@ -254,7 +301,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         <h2 className="section-h" style={{ margin: "34px 0 0", flex: "0 0 auto" }}>
           Photo gallery
         </h2>
-        {canWrite && (
+        {canUpload && (
           <button className="add-mini" onClick={() => setPhotoModal(true)}>
             + Add photos
           </button>
@@ -286,12 +333,10 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           {visiblePhotos.map((p: any) => {
             const url = photoUrlOf(p);
             const who = p.uploader?.short_name;
+            const rc = reactionInfo[p.id];
+            const cc = commentCounts[p.id] || 0;
             return (
-              <div
-                className="pin clickable"
-                key={p.id}
-                onClick={() => setLightbox({ url, caption: p.caption })}
-              >
+              <div className="pin clickable" key={p.id} onClick={() => setModalPhoto(p)}>
                 <img src={url} alt={p.caption || ""} />
                 {p.category && <span className="tag">{labelFor(p.category)}</span>}
                 {canWrite && editMode && (
@@ -306,16 +351,18 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
                     ✕
                   </button>
                 )}
-                {(p.caption || who) && (
-                  <div className="caption">
-                    {p.caption}
-                    {who && (
-                      <span className="by">
-                        {p.caption ? ` — ${who}` : `added by ${who}`}
+                <div className="pin-strip">
+                  {p.caption && <div className="cap">{p.caption}</div>}
+                  <div className="meta">
+                    {who && <span>by {who}</span>}
+                    {cc > 0 && <span>💬 {cc}</span>}
+                    {rc && rc.total > 0 && (
+                      <span>
+                        {rc.top} {rc.total}
                       </span>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
@@ -338,6 +385,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
               <img
                 src={c.author.avatar_url}
                 alt=""
+                referrerPolicy="no-referrer"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
             ) : (
@@ -396,11 +444,17 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         }}
       />
 
-      {lightbox && (
-        <div className="lightbox" onClick={() => setLightbox(null)}>
-          <img src={lightbox.url} alt={lightbox.caption || ""} />
-          {lightbox.caption && <div className="lb-cap">{lightbox.caption}</div>}
-        </div>
+      {modalPhoto && (
+        <PhotoModal
+          photo={modalPhoto}
+          url={photoUrlOf(modalPhoto)}
+          canEdit={isOwner}
+          onClose={() => setModalPhoto(null)}
+          onCaptionSaved={(id, caption) =>
+            setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)))
+          }
+          onReactionChange={loadCounts}
+        />
       )}
     </>
   );

@@ -10,6 +10,34 @@ const supabase = supabaseUrl && supabaseServiceKey
   ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) } })
   : null;
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+    }
+    const body = await request.json();
+    const patch: Record<string, unknown> = {};
+    if ("caption" in body) patch.caption = body.caption ?? "";
+    if ("category" in body) patch.category = body.category || null;
+
+    const { data, error } = await supabase
+      .from("photos")
+      .update(patch)
+      .eq("id", params.id)
+      .select("*, uploader:uploaded_by(short_name, avatar_url)")
+      .single();
+    if (error) throw error;
+    return NextResponse.json(data);
+  } catch (error) {
+    const msg = (error as Error).message;
+    console.error("Photo update error:", msg);
+    return NextResponse.json({ error: `Update error: ${msg}` }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

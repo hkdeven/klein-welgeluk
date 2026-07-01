@@ -126,9 +126,9 @@ export default function LoginPage() {
           </h3>
 
           <p className="text-[13px] text-sage text-center leading-[1.5] mb-[18px]">
-            Enter the passcode shared by Deven or Wernardt. You&apos;ll be able to
-            browse the whole project, but won&apos;t be able to comment or make
-            changes.
+            Enter the passcode shared by Deven or Wernardt. You can browse the
+            whole project and add photos or documents — but you can&apos;t delete,
+            comment, or edit.
           </p>
 
           <form onSubmit={handleGuest}>

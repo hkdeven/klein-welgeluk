@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PhotoUploadModal, {
   PHOTO_CATEGORIES,
   labelFor,
 } from "@/components/PhotoUploadModal";
 import { useToast } from "@/components/Toast";
 import { useAuth, useCurrentUser } from "@/components/AuthProvider";
+import PhotoModal from "@/components/PhotoModal";
 import { useEditMode } from "@/components/EditModeContext";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
@@ -16,7 +17,7 @@ const photoUrlOf = (p: any) => p.external_url || storageUrl(`photos/${p.storage_
 
 export default function PhotosPage() {
   const toast = useToast();
-  const { canWrite } = useAuth();
+  const { canWrite, canUpload } = useAuth();
   const { editMode } = useEditMode();
   const user = useCurrentUser();
 
@@ -24,7 +25,10 @@ export default function PhotosPage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [filter, setFilter] = useState("all");
   const [modal, setModal] = useState(false);
-  const [lightbox, setLightbox] = useState<{ url: string; caption?: string } | null>(null);
+  const [modalPhoto, setModalPhoto] = useState<any | null>(null);
+  const [reactionInfo, setReactionInfo] = useState<Record<string, { total: number; top: string }>>({});
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const isOwner = user.role === "owner";
 
   // Find-or-create a dedicated "photos" page so uploads here have a valid page_id.
   useEffect(() => {
@@ -53,6 +57,48 @@ export default function PhotosPage() {
       }
     })();
   }, []);
+
+  // Reaction + comment counts for the grid strips.
+  const loadCounts = useCallback(() => {
+    const ids = photos.map((p) => p.id);
+    if (!ids.length) {
+      setReactionInfo({});
+      setCommentCounts({});
+      return;
+    }
+    const q = ids.join(",");
+    fetch(`/api/reactions?photo_ids=${q}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const acc: Record<string, { total: number; counts: Record<string, number> }> = {};
+        (d.reactions || []).forEach((r: any) => {
+          const e = acc[r.photo_id] || (acc[r.photo_id] = { total: 0, counts: {} });
+          e.total++;
+          e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+        });
+        const out: Record<string, { total: number; top: string }> = {};
+        Object.entries(acc).forEach(([pid, e]) => {
+          const top = Object.entries(e.counts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+          out[pid] = { total: e.total, top };
+        });
+        setReactionInfo(out);
+      })
+      .catch(() => {});
+    fetch(`/api/comments?photo_ids=${q}`)
+      .then((r) => r.json())
+      .then((d) => {
+        const cc: Record<string, number> = {};
+        (d.comments || []).forEach((c: any) => {
+          if (c.photo_id) cc[c.photo_id] = (cc[c.photo_id] || 0) + 1;
+        });
+        setCommentCounts(cc);
+      })
+      .catch(() => {});
+  }, [photos]);
+
+  useEffect(() => {
+    loadCounts();
+  }, [loadCounts]);
 
   const uploadPhoto = async (file: File, category: string, description: string) => {
     if (!pageId) throw new Error("Photos page not ready");
@@ -130,7 +176,7 @@ export default function PhotosPage() {
         ) : (
           <span />
         )}
-        {canWrite && (
+        {canUpload && (
           <button
             onClick={() => setModal(true)}
             className="text-sage text-[12px] underline cursor-pointer hover:text-bottle"
@@ -146,12 +192,10 @@ export default function PhotosPage() {
             const url = photoUrlOf(p);
             const who = p.uploader?.short_name;
             const where = p.page?.title;
+            const rc = reactionInfo[p.id];
+            const cc = commentCounts[p.id] || 0;
             return (
-              <div
-                className="pin clickable"
-                key={p.id}
-                onClick={() => setLightbox({ url, caption: p.caption })}
-              >
+              <div className="pin clickable" key={p.id} onClick={() => setModalPhoto(p)}>
                 <img src={url} alt={p.caption || ""} />
                 {p.category && <span className="tag">{labelFor(p.category)}</span>}
                 {canWrite && editMode && (
@@ -166,13 +210,20 @@ export default function PhotosPage() {
                     ✕
                   </button>
                 )}
-                <div className="caption">
-                  {p.caption}
-                  <span className="by">
-                    {p.caption ? " — " : ""}
-                    {who || "—"}
-                    {where ? ` · ${where}` : ""}
-                  </span>
+                <div className="pin-strip">
+                  {p.caption && <div className="cap">{p.caption}</div>}
+                  <div className="meta">
+                    <span>
+                      {who || "—"}
+                      {where ? ` · ${where}` : ""}
+                    </span>
+                    {cc > 0 && <span>💬 {cc}</span>}
+                    {rc && rc.total > 0 && (
+                      <span>
+                        {rc.top} {rc.total}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -197,11 +248,17 @@ export default function PhotosPage() {
         }}
       />
 
-      {lightbox && (
-        <div className="lightbox" onClick={() => setLightbox(null)}>
-          <img src={lightbox.url} alt={lightbox.caption || ""} />
-          {lightbox.caption && <div className="lb-cap">{lightbox.caption}</div>}
-        </div>
+      {modalPhoto && (
+        <PhotoModal
+          photo={modalPhoto}
+          url={photoUrlOf(modalPhoto)}
+          canEdit={isOwner}
+          onClose={() => setModalPhoto(null)}
+          onCaptionSaved={(id, caption) =>
+            setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)))
+          }
+          onReactionChange={loadCounts}
+        />
       )}
     </>
   );

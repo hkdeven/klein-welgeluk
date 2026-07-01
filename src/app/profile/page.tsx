@@ -8,7 +8,7 @@ import ProfilePhotoCropper from "@/components/ProfilePhotoCropper";
 
 export default function ProfilePage() {
   const mockUser = useCurrentUser();
-  const { signedIn, signOut, updateUser } = useAuth();
+  const { signedIn, signOut, updateUser, isGuest } = useAuth();
   const toast = useToast();
   const isOwner = mockUser.role === "owner";
   const [guestPass, setGuestPass] = useState("");
@@ -158,6 +158,19 @@ export default function ProfilePage() {
     }
   };
 
+  if (isGuest) {
+    return (
+      <>
+        <div className="title-block">
+          <h1>Your profile</h1>
+        </div>
+        <p className="desc-text" style={{ color: "var(--mist)" }}>
+          Profiles aren&apos;t available in guest view.
+        </p>
+      </>
+    );
+  }
+
   return (
     <>
       <div className="title-block">
@@ -174,7 +187,7 @@ export default function ProfilePage() {
               <div className="w-40 h-40 rounded-full bg-[#D6DCD3] overflow-hidden flex items-center justify-center text-bottle font-fraunces text-[54px] mb-3.5">
                 {mockUser.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={mockUser.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img src={mockUser.avatar_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                 ) : (
                   mockUser.short_name?.charAt(0).toUpperCase()
                 )}
@@ -346,7 +359,7 @@ export default function ProfilePage() {
                     <div className="w-8 h-8 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden flex-shrink-0">
                       {u.avatar_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <img src={u.avatar_url} alt="" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       ) : (
                         (u.short_name?.charAt(0) || "?").toUpperCase()
                       )}
@@ -419,8 +432,8 @@ export default function ProfilePage() {
                 <span className="flex-1 h-px bg-[#E5E1D3]"></span>
               </h2>
               <p className="text-[12px] text-sage mb-2">
-                Set the passcode you share with guests. They can browse read-only —
-                no comments, uploads, or edits.
+                Set the passcode you share with guests. They can browse and add
+                photos or documents, but can&apos;t delete, comment, or edit.
               </p>
               <form onSubmit={setGuestPasscode} className="flex gap-2 max-w-md">
                 <input

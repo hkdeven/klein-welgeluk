@@ -28,6 +28,7 @@ export async function GET() {
       supabase
         .from("comments")
         .select("id, created_at, author:author_id(short_name), page:page_id(title, slug)")
+        .not("page_id", "is", null)
         .order("created_at", { ascending: false })
         .limit(10),
       supabase

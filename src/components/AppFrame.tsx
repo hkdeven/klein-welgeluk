@@ -53,7 +53,7 @@ export default function AppFrame({ children }: { children: React.ReactNode }) {
           <Topbar
             user={user}
             editMode={editMode}
-            onEditModeChange={setEditMode}
+            onEditModeChange={isGuest ? undefined : setEditMode}
             onMenuClick={() => setNavOpen(true)}
           />
           <main>{children}</main>

@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useEditMode } from "@/components/EditModeContext";
-import { useCurrentUser } from "@/components/AuthProvider";
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import EditBanner from "@/components/EditBanner";
 import PageMedia from "@/components/PageMedia";
 import { DOC_CATEGORIES } from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
 import { usePages, type Page } from "@/hooks/usePages";
 import { tagColor } from "@/lib/tagColor";
+import DecisionLog from "@/components/DecisionLog";
+import SnagList from "@/components/SnagList";
 
 
 export default function DynamicPage() {
@@ -18,6 +20,7 @@ export default function DynamicPage() {
   const toast = useToast();
   const { editMode } = useEditMode();
   const mockUser = useCurrentUser();
+  const { isGuest, canWrite } = useAuth();
   const pathname = usePathname();
   const slug = decodeURIComponent((pathname || "").replace(/^\//, ""));
 
@@ -265,6 +268,10 @@ export default function DynamicPage() {
   const assignedIds = assignments.map((a) => a.user_id);
   const availableUsers = users.filter((u) => !assignedIds.includes(u.id));
 
+  // The snag list appears once a page reaches the "Snagging" stage.
+  const currentStageName = stages.find((s: any) => s.is_current)?.name || "";
+  const isSnagging = currentStageName.trim().toLowerCase() === "snagging";
+
   // Whether the costing section has any content. Notes are HTML, so strip tags.
   const hasCosting = Boolean(
     costing.budgeted_amount?.trim() ||
@@ -362,6 +369,11 @@ export default function DynamicPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Snag list — appears once the page is in the Snagging stage */}
+              {isSnagging && !isGuest && pageId && (
+                <SnagList pageId={pageId} canEdit={canWrite} canDelete={canWrite && editMode} />
               )}
 
               {/* Assigned + Tags */}
@@ -501,9 +513,20 @@ export default function DynamicPage() {
               {/* Documents, Photos, Comments (shared with Overview) */}
               <PageMedia pageId={pageId} user={mockUser} defaultCategory={defaultCategory} />
 
-              {/* Costing — at the bottom, after comments. Hidden when empty
-                  unless an owner is in edit mode (so they can add content). */}
-              {(hasCosting || canEdit) && (
+              {/* Decision log for this page (hidden from guests) */}
+              {!isGuest && pageId && (
+                <DecisionLog
+                  pageId={pageId}
+                  className="sub-decisions"
+                  canAdd={canWrite}
+                  canDelete={isOwner && editMode}
+                  authorId={mockUser.id}
+                />
+              )}
+
+              {/* Costing — at the bottom, after comments. Never shown to guests;
+                  otherwise hidden when empty unless an owner is in edit mode. */}
+              {!isGuest && (hasCosting || canEdit) && (
                 <div className="costing">
                   <div
                     className="costing-head"

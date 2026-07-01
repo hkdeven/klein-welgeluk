@@ -6,7 +6,9 @@ import PageMedia from "@/components/PageMedia";
 import EditBanner from "@/components/EditBanner";
 import { useToast } from "@/components/Toast";
 import { useEditMode } from "@/components/EditModeContext";
-import { useCurrentUser } from "@/components/AuthProvider";
+import { useCurrentUser, useAuth } from "@/components/AuthProvider";
+import MilestonesSection from "@/components/MilestonesSection";
+import DecisionLog from "@/components/DecisionLog";
 
 
 interface BriefSections {
@@ -35,6 +37,7 @@ export default function OverviewPage() {
   const toast = useToast();
   const { editMode } = useEditMode();
   const mockUser = useCurrentUser();
+  const { isGuest, canWrite } = useAuth();
 
   const isOwner = mockUser.role === "owner";
   const canEdit = isOwner && editMode;
@@ -162,6 +165,18 @@ export default function OverviewPage() {
             >
               {savingBrief ? "Saving..." : "Save brief"}
             </button>
+          )}
+
+          {!isGuest && (
+            <>
+              <MilestonesSection canEdit={isOwner} canDelete={isOwner && editMode} />
+              <DecisionLog
+                showSource
+                canAdd={canWrite}
+                canDelete={isOwner && editMode}
+                authorId={mockUser.id}
+              />
+            </>
           )}
 
           <PageMedia pageId={pageId} user={mockUser} />

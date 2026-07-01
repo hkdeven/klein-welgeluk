@@ -22,25 +22,20 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const page_id = searchParams.get("page_id");
+    const photo_id = searchParams.get("photo_id");
+    const photo_ids = searchParams.get("photo_ids");
 
-    if (!page_id) {
-      return NextResponse.json(
-        { error: "page_id is required" },
-        { status: 400 }
-      );
-    }
-
-    const { data: comments, error } = await supabase
+    let q = supabase
       .from("comments")
-      .select(
-        `
-        *,
-        author:author_id(id, display_name, short_name, avatar_url, role)
-      `
-      )
-      .eq("page_id", page_id)
+      .select(`*, author:author_id(id, display_name, short_name, avatar_url, role)`)
       .order("created_at", { ascending: true });
 
+    if (page_id) q = q.eq("page_id", page_id);
+    else if (photo_id) q = q.eq("photo_id", photo_id);
+    else if (photo_ids) q = q.in("photo_id", photo_ids.split(",").filter(Boolean));
+    else return NextResponse.json({ error: "page_id, photo_id or photo_ids is required" }, { status: 400 });
+
+    const { data: comments, error } = await q;
     if (error) throw error;
 
     return NextResponse.json({
@@ -48,11 +43,13 @@ export async function GET(request: NextRequest) {
       total: comments?.length || 0,
     });
   } catch (error) {
-    console.error("Comments fetch error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch comments" },
-      { status: 500 }
-    );
+    const msg = (error as Error).message;
+    // photo_id column may not exist yet — degrade so the photo view shows no comments.
+    if (/photo_id/i.test(msg) && /(does not exist|could not find|schema cache)/i.test(msg)) {
+      return NextResponse.json({ comments: [], total: 0 });
+    }
+    console.error("Comments fetch error:", msg);
+    return NextResponse.json({ error: "Failed to fetch comments" }, { status: 500 });
   }
 }
 
@@ -65,26 +62,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { page_id, body, author_id, parent_comment_id } =
+    const { page_id, photo_id, body, author_id, parent_comment_id } =
       await request.json();
 
-    if (!page_id || !body || !author_id) {
+    if (!body || !author_id || (!page_id && !photo_id)) {
       return NextResponse.json(
-        { error: "page_id, body, and author_id are required" },
+        { error: "body, author_id and one of page_id/photo_id are required" },
         { status: 400 }
       );
     }
 
+    // Only include photo_id when present so page comments still insert if the
+    // column hasn't been added yet.
+    const row: Record<string, unknown> = {
+      page_id: page_id || null,
+      body,
+      author_id,
+      parent_comment_id: parent_comment_id || null,
+    };
+    if (photo_id) row.photo_id = photo_id;
+
     const { data: newComment, error } = await supabase
       .from("comments")
-      .insert([
-        {
-          page_id,
-          body,
-          author_id,
-          parent_comment_id: parent_comment_id || null,
-        },
-      ])
+      .insert([row])
       .select(
         `
         *,
@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Notify: page assignees ("comment") and anyone @mentioned ("mention").
-    try {
+    // Notify only for page-level comments (photo comments don't notify).
+    if (page_id) try {
       const snippet = plainText(body).slice(0, 120);
       const [pageRes, assignRes, usersRes] = await Promise.all([
         supabase.from("pages").select("slug, title").eq("id", page_id).single(),

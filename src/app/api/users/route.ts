@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
     const { data: users, error } = await supabase
       .from("users")
       .select("*")
+      .neq("role", "guest")
       .order("display_name", { ascending: true });
 
     if (error) throw error;
