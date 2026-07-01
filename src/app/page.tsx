@@ -7,6 +7,7 @@ import EventDetailModal from "@/components/EventDetailModal";
 import { useEditMode } from "@/components/EditModeContext";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
+import { tagColor } from "@/lib/tagColor";
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
@@ -292,51 +293,8 @@ export default function HomePage() {
 
           {editMode && <EditBanner />}
 
-          {/* Assigned to me (hidden for read-only guests) */}
-          {!isGuest && (
-            <>
-          <h2 className="section-h">Assigned to me</h2>
-          {assigned.length > 0 ? (
-            <div className="sub-grid">
-              {assigned.map((a) => (
-                <a
-                  key={a.id}
-                  href={a.page ? `/${a.page.slug}` : "#"}
-                  className="sub-card"
-                >
-                  <div className="name">{a.page?.title || "Page"}</div>
-                  {a.page && (
-                    <div className="row">
-                      Current status:{" "}
-                      <span className="current">
-                        {stageByPage[a.page.id] || "Not started"}
-                      </span>
-                    </div>
-                  )}
-                  {a.page && <div className="who">{breadcrumbFor(a.page.id)}</div>}
-                  {a.page && (tagsByPage[a.page.id]?.length ?? 0) > 0 && (
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
-                      {tagsByPage[a.page.id].map((t: any) => (
-                        <span className="tag-chip" key={t.id}>
-                          {t.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="home-card">
-              <p className="text-sage" style={{ fontSize: 13 }}>
-                Nothing assigned to you right now
-              </p>
-            </div>
-          )}
-            </>
-          )}
-
-          {/* Upcoming events — events you're tagged in within the next 7 days */}
+          {/* Upcoming events — events you're tagged in within the next 7 days
+              (above Assigned; hidden entirely when there are none) */}
           {upcoming.length > 0 && (
             <>
               <h2 className="section-h">Upcoming events</h2>
@@ -373,6 +331,50 @@ export default function HomePage() {
                   </button>
                 ))}
               </div>
+            </>
+          )}
+
+          {/* Assigned to me (hidden for read-only guests) */}
+          {!isGuest && (
+            <>
+          <h2 className="section-h">Assigned to me</h2>
+          {assigned.length > 0 ? (
+            <div className="sub-grid">
+              {assigned.map((a) => (
+                <a
+                  key={a.id}
+                  href={a.page ? `/${a.page.slug}` : "#"}
+                  className="sub-card"
+                >
+                  <div className="name">{a.page?.title || "Page"}</div>
+                  {a.page && (
+                    <div className="row">
+                      Current status:{" "}
+                      <span className="current">
+                        {stageByPage[a.page.id] || "Not started"}
+                      </span>
+                    </div>
+                  )}
+                  {a.page && (tagsByPage[a.page.id]?.length ?? 0) > 0 && (
+                    <div className="card-tags">
+                      {tagsByPage[a.page.id].map((t: any) => (
+                        <span className="card-tag" key={t.id} style={tagColor(t.name)}>
+                          {t.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {a.page && <div className="who">{breadcrumbFor(a.page.id)}</div>}
+                </a>
+              ))}
+            </div>
+          ) : (
+            <div className="home-card">
+              <p className="text-sage" style={{ fontSize: 13 }}>
+                Nothing assigned to you right now
+              </p>
+            </div>
+          )}
             </>
           )}
 

@@ -205,7 +205,21 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   return (
     <>
       {/* Documents */}
-      <h2 className="section-h">Documents</h2>
+      <div className="gallery-bar" style={{ alignItems: "baseline" }}>
+        <h2 className="section-h" style={{ margin: "34px 0 0", flex: "0 0 auto" }}>
+          Documents
+        </h2>
+        {canWrite && (
+          <button className="add-mini" onClick={() => setDocModal(true)}>
+            + Add document
+          </button>
+        )}
+      </div>
+      {documents.length === 0 && (
+        <p className="desc-text" style={{ color: "var(--mist)" }}>
+          No documents yet.
+        </p>
+      )}
       {documents.map((doc: any) => (
         <div className="doc-row" key={doc.id}>
           <div className="ic">{doc.file_type?.toUpperCase()?.slice(0, 3) || "DOC"}</div>
@@ -234,15 +248,6 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           </div>
         </div>
       ))}
-      {canWrite && (
-        <button
-          className="doc-row"
-          style={{ borderStyle: "dashed", color: "var(--sage)", justifyContent: "center", cursor: "pointer", width: "100%" }}
-          onClick={() => setDocModal(true)}
-        >
-          + upload document
-        </button>
-      )}
 
       {/* Photos */}
       <div className="gallery-bar" style={{ alignItems: "baseline" }}>

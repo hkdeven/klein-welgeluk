@@ -463,6 +463,23 @@ main {
   font-family: 'IBM Plex Mono', monospace;
   white-space: nowrap; flex: 0 0 auto;
 }
+/* Brass-tinted tag, used on sub-page cards (parent page + home). Muted, legible. */
+.card-tag {
+  display: inline-flex;
+  align-items: center;
+  background: #F3E4CC; color: #6E4E22;
+  border: 1px solid #E3CDA6; border-radius: 3px;
+  padding: 1px 7px; font-size: 9.5px;
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap; flex: 0 0 auto;
+}
+/* Desktop: tags pinned to the card's top-right, inline with the title and off
+   the busy left. Cards are position:relative so this anchors to them. */
+.card-tags {
+  position: absolute; top: 15px; right: 16px;
+  display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;
+  max-width: 48%;
+}
 .person-chip {
   display: inline-flex; align-items: center; gap: 7px;
   background: var(--whitewash);
@@ -491,7 +508,7 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 /* Costing */
 .costing {
   border: 1px solid #E8D9C2; background: var(--brass-bg);
-  border-radius: 3px; margin: 30px 0;
+  border-radius: 3px; margin: 60px 0 20px;
 }
 .costing-head {
   display: flex; align-items: center; gap: 10px;
@@ -625,6 +642,7 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 
 /* Sub-page cards */
 .sub-list .sub-card-lg {
+  position: relative;
   border: 1px solid #ECE8DC; border-radius: 4px;
   padding: 18px 20px; background: var(--whitewash); margin-bottom: 12px;
   display: block; width: 100%; text-align: left; cursor: pointer;
@@ -650,6 +668,7 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 /* Home dashboard */
 .sub-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
 .sub-card {
+  position: relative;
   border: 1px solid #ECE8DC; border-radius: 4px;
   padding: 14px 16px; background: var(--whitewash); display: block;
 }
@@ -827,6 +846,17 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   /* Costing fields stack so the label + value don't overflow the screen. */
   .costing-field { flex-wrap: wrap; gap: 2px 10px; }
   .costing-field label { width: 100%; }
+  /* Keep the top gap tighter on phones (desktop uses 60px). */
+  .costing { margin-top: 30px; }
+
+  /* On phones tags flow in normal order (below the status) and align left,
+     so they can't overflow off the card. */
+  .card-tags {
+    position: static; max-width: none;
+    justify-content: flex-start; margin-top: 6px;
+  }
+  /* Tighten the gap under the card title on mobile. */
+  .sub-list .sub-card-lg .name, .sub-card .name { margin-bottom: 2px; }
 
   /* Hero carousel: take the photo's natural height (no fixed box, no crop/stretch).
      Drop the desktop full-bleed negative margins so it doesn't overflow. */
@@ -839,4 +869,13 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   /* Login */
   .login-page { padding: 18px 14px; }
   .login-card { padding: 0 20px 22px; }
+
+  /* Footer: stack and center everything (incl. the weather) on phones. */
+  .site-footer {
+    flex-direction: column;
+    text-align: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px 16px;
+  }
 }

@@ -111,29 +111,34 @@ export default function PhotosPage() {
 
   return (
     <>
-      <div className="gallery-bar">
-        <div className="title-block" style={{ flex: 1, marginBottom: 0, borderBottom: "none" }}>
-          <h1>Photos</h1>
-        </div>
+      <div className="title-block">
+        <h1>Photos</h1>
+      </div>
+
+      <div className="flex justify-between items-center mb-[18px] gap-4 flex-wrap">
+        {photos.length > 0 ? (
+          <div className="pill-filters" style={{ margin: 0 }}>
+            <span className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
+              All
+            </span>
+            {photoCats.map((c) => (
+              <span key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
+                {labelFor(c)}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <span />
+        )}
         {canWrite && (
-          <button className="add-mini" onClick={() => setModal(true)}>
-            + Add photos
+          <button
+            onClick={() => setModal(true)}
+            className="text-sage text-[12px] underline cursor-pointer hover:text-bottle"
+          >
+            + upload photo
           </button>
         )}
       </div>
-
-      {photos.length > 0 && (
-        <div className="pill-filters" style={{ margin: "4px 0 18px" }}>
-          <span className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>
-            All
-          </span>
-          {photoCats.map((c) => (
-            <span key={c} className={filter === c ? "active" : ""} onClick={() => setFilter(c)}>
-              {labelFor(c)}
-            </span>
-          ))}
-        </div>
-      )}
 
       {visible.length > 0 ? (
         <div className="masonry">

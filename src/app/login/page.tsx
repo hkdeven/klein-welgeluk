@@ -11,6 +11,7 @@ export default function LoginPage() {
   const toast = useToast();
   const { signedIn, signInWithGoogle, signInWithEmail, enterGuest, authError } = useAuth();
   const [isGuest, setIsGuest] = useState(false);
+  const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passcode, setPasscode] = useState("");
@@ -78,41 +79,35 @@ export default function LoginPage() {
             Continue with Google
           </button>
 
-          <div className="divider">or sign in with email</div>
+          <button className="sso-btn" onClick={() => setShowEmail((v) => !v)}>
+            Sign in with email
+          </button>
 
-          <form onSubmit={handleEmailSignIn}>
-            <input
-              className="field-input"
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <input
-              className="field-input"
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <button className="primary-btn" type="submit" disabled={busy}>
-              {busy ? "Signing in…" : "Sign in"}
-            </button>
-          </form>
+          {showEmail && (
+            <form onSubmit={handleEmailSignIn}>
+              <input
+                className="field-input"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <input
+                className="field-input"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button className="primary-btn" type="submit" disabled={busy}>
+                {busy ? "Signing in…" : "Sign in"}
+              </button>
+            </form>
+          )}
 
-          <div className="text-center text-[11px] text-mist mt-3.5">
-            For owners, architects, engineers, and contractors.
-          </div>
-
-          <div className="text-center text-[12px] text-sage mt-[18px] pt-[18px] border-t border-[#ECE8DC]">
-            Following along?{" "}
-            <button
-              onClick={() => setIsGuest(true)}
-              className="underline cursor-pointer hover:text-bottle"
-            >
-              Enter as guest
-            </button>
-          </div>
+          <button className="sso-btn" onClick={() => setIsGuest(true)}>
+            Following along? Enter as a guest
+          </button>
         </div>
       ) : (
         <div className="login-card">

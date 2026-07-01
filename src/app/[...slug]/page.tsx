@@ -10,6 +10,7 @@ import PageMedia from "@/components/PageMedia";
 import { DOC_CATEGORIES } from "@/components/DocUploadModal";
 import { useToast } from "@/components/Toast";
 import { usePages, type Page } from "@/hooks/usePages";
+import { tagColor } from "@/lib/tagColor";
 
 
 export default function DynamicPage() {
@@ -67,6 +68,7 @@ export default function DynamicPage() {
   const [addingStage, setAddingStage] = useState(false);
   const [stageName, setStageName] = useState("");
   const [childCurrents, setChildCurrents] = useState<Record<string, string>>({});
+  const [childTags, setChildTags] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     setBrief(page?.brief || "");
@@ -93,6 +95,14 @@ export default function DynamicPage() {
         if (childIds.length) {
           const cu = await fetch(`/api/stages?ids=${childIds.join(",")}`).then((r) => r.json());
           if (active) setChildCurrents(cu.currents || {});
+          // Tags for each child, so we can show them on the child cards.
+          const tagEntries = await Promise.all(
+            childIds.map(async (id) => {
+              const r = await fetch(`/api/tags?page_id=${id}`).then((x) => x.json());
+              return [id, r.tags || []] as const;
+            })
+          );
+          if (active) setChildTags(Object.fromEntries(tagEntries));
         }
         if (cost.costing) {
           setCosting({
@@ -255,6 +265,14 @@ export default function DynamicPage() {
   const assignedIds = assignments.map((a) => a.user_id);
   const availableUsers = users.filter((u) => !assignedIds.includes(u.id));
 
+  // Whether the costing section has any content. Notes are HTML, so strip tags.
+  const hasCosting = Boolean(
+    costing.budgeted_amount?.trim() ||
+      costing.quote_received?.trim() ||
+      costing.actual_invoiced?.trim() ||
+      costing.notes?.replace(/<[^>]*>/g, "").trim()
+  );
+
   return (
     <>
       {loading ? (
@@ -392,7 +410,7 @@ export default function DynamicPage() {
                   <span className="label">Tags</span>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     {tags.map((t) => (
-                      <span className="tag-chip" key={t.id}>
+                      <span className="tag-chip" key={t.id} style={tagColor(t.name)}>
                         {t.name}
                         {canEdit && (
                           <span
@@ -448,70 +466,6 @@ export default function DynamicPage() {
                 </p>
               )}
 
-              {/* Costing — accordion, collapsed by default */}
-              <div className="costing">
-                <div
-                  className="costing-head"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setCostingOpen((o) => !o)}
-                >
-                  <span className="chev">{costingOpen ? "▾" : "▸"}</span> Costing details
-                  <span className="lock">hidden from guests</span>
-                </div>
-                {costingOpen && (
-                  <div className="costing-body">
-                    {(
-                      [
-                        ["budgeted_amount", "Budgeted amount"],
-                        ["quote_received", "Quote received"],
-                        ["actual_invoiced", "Actual invoiced"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <div className="costing-field" key={key}>
-                        <label>{label}</label>
-                        {canEdit ? (
-                          <input
-                            className="val"
-                            value={costing[key]}
-                            placeholder="click to type"
-                            onChange={(e) => setCosting({ ...costing, [key]: e.target.value })}
-                          />
-                        ) : (
-                          <span className="val">{costing[key] || "—"}</span>
-                        )}
-                      </div>
-                    ))}
-                    <div className="costing-notes">
-                      <label>Notes</label>
-                      {canEdit ? (
-                        <RichTextEditor
-                          value={costing.notes}
-                          onChange={(html) => setCosting({ ...costing, notes: html })}
-                          placeholder="Free text — e.g. volume discount strategy..."
-                          minHeight={70}
-                        />
-                      ) : costing.notes ? (
-                        <div className="rich-text" dangerouslySetInnerHTML={{ __html: costing.notes }} />
-                      ) : (
-                        <p className="desc-text" style={{ color: "var(--mist)" }}>
-                          No notes yet.
-                        </p>
-                      )}
-                    </div>
-                    {canEdit && (
-                      <button
-                        onClick={saveCosting}
-                        disabled={savingCosting}
-                        className="post-btn"
-                        style={{ marginTop: 12 }}
-                      >
-                        {savingCosting ? "Saving..." : "Save costing"}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-
               {/* Sub-pages — only when there are children */}
               {children.length > 0 && (
                 <>
@@ -523,6 +477,15 @@ export default function DynamicPage() {
                         <div className="status">
                           Current status: {childCurrents[child.id] || "Not started"}
                         </div>
+                        {(childTags[child.id]?.length ?? 0) > 0 && (
+                          <div className="card-tags">
+                            {childTags[child.id].map((t: any) => (
+                              <span className="card-tag" key={t.id} style={tagColor(t.name)}>
+                                {t.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {child.brief && (
                           <div
                             className="brief rich-text"
@@ -537,6 +500,73 @@ export default function DynamicPage() {
 
               {/* Documents, Photos, Comments (shared with Overview) */}
               <PageMedia pageId={pageId} user={mockUser} defaultCategory={defaultCategory} />
+
+              {/* Costing — at the bottom, after comments. Hidden when empty
+                  unless an owner is in edit mode (so they can add content). */}
+              {(hasCosting || canEdit) && (
+                <div className="costing">
+                  <div
+                    className="costing-head"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setCostingOpen((o) => !o)}
+                  >
+                    <span className="chev">{costingOpen ? "▾" : "▸"}</span> Costing details
+                    <span className="lock">hidden from guests</span>
+                  </div>
+                  {costingOpen && (
+                    <div className="costing-body">
+                      {(
+                        [
+                          ["budgeted_amount", "Budgeted amount"],
+                          ["quote_received", "Quote received"],
+                          ["actual_invoiced", "Actual invoiced"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <div className="costing-field" key={key}>
+                          <label>{label}</label>
+                          {canEdit ? (
+                            <input
+                              className="val"
+                              value={costing[key]}
+                              placeholder="click to type"
+                              onChange={(e) => setCosting({ ...costing, [key]: e.target.value })}
+                            />
+                          ) : (
+                            <span className="val">{costing[key] || "—"}</span>
+                          )}
+                        </div>
+                      ))}
+                      <div className="costing-notes">
+                        <label>Notes</label>
+                        {canEdit ? (
+                          <RichTextEditor
+                            value={costing.notes}
+                            onChange={(html) => setCosting({ ...costing, notes: html })}
+                            placeholder="Free text — e.g. volume discount strategy..."
+                            minHeight={70}
+                          />
+                        ) : costing.notes ? (
+                          <div className="rich-text" dangerouslySetInnerHTML={{ __html: costing.notes }} />
+                        ) : (
+                          <p className="desc-text" style={{ color: "var(--mist)" }}>
+                            No notes yet.
+                          </p>
+                        )}
+                      </div>
+                      {canEdit && (
+                        <button
+                          onClick={saveCosting}
+                          disabled={savingCosting}
+                          className="post-btn"
+                          style={{ marginTop: 12 }}
+                        >
+                          {savingCosting ? "Saving..." : "Save costing"}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
     </>

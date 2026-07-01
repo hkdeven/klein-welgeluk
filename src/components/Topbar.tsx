@@ -20,7 +20,7 @@ export default function Topbar({
   onMenuClick,
 }: TopbarProps) {
   return (
-    <div className="topbar sticky top-0 z-40 bg-white border-b border-[#ECE8DC]">
+    <div className="topbar sticky top-0 z-40 bg-[#5c7a5e1f] border-b border-[#5c7a5e52]">
       {/* Always-present left slot so justify-between keeps controls on the right;
           the hamburger inside is only visible on mobile. */}
       <div className="flex items-center">
@@ -38,7 +38,7 @@ export default function Topbar({
             className={`flex items-center gap-[7px] border rounded-full py-1 px-3 font-mono text-[11px] ${
               editMode
                 ? "bg-bottle text-white border-bottle"
-                : "bg-white text-sage border-[#D7DECF]"
+                : "bg-white text-sage border-[#5c7a5e52]"
             }`}
           >
             <span>edit mode</span>
