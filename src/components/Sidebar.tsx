@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 
 interface Page {
@@ -79,6 +79,12 @@ function NavIcon({ name }: { name: string }) {
           <path d="M3 8.5h14M7 3v3M13 3v3" />
         </svg>
       );
+    case "digest":
+      return (
+        <svg {...p}>
+          <path d="M3 10.5h3l2-5 3 9 2-4h4" />
+        </svg>
+      );
     default:
       return null;
   }
@@ -88,6 +94,17 @@ export default function Sidebar({ pages, canCreate = true, editMode = false, ref
   const pathname = usePathname();
   const router = useRouter();
   const { isGuest } = useAuth();
+  const [digestOn, setDigestOn] = useState(false);
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => setDigestOn(d.settings?.weekly_digest_enabled === true))
+      .catch(() => {});
+    // Update instantly when an owner toggles it in their profile.
+    const onToggle = (e: Event) => setDigestOn(!!(e as CustomEvent).detail);
+    window.addEventListener("kw-digest-toggle", onToggle);
+    return () => window.removeEventListener("kw-digest-toggle", onToggle);
+  }, []);
   const activeSlug = decodeURIComponent((pathname || "").replace(/^\//, ""));
   const isActive = (slug: string) => activeSlug === slug;
 
@@ -236,6 +253,9 @@ export default function Sidebar({ pages, canCreate = true, editMode = false, ref
             { href: "/documents", name: "documents", text: "Documents", slug: "documents" },
             { href: "/photos", name: "photos", text: "Photos", slug: "photos" },
             { href: "/calendar", name: "calendar", text: "Calendar", slug: "calendar" },
+            ...(digestOn && !isGuest
+              ? [{ href: "/weekly-digest", name: "digest", text: "Weekly Digest", slug: "weekly-digest" }]
+              : []),
           ]
             .filter((l) => !(isGuest && l.name === "documents"))
             .map((l) => (

@@ -28,6 +28,7 @@ export default function DocUploadModal({
   const [files, setFiles] = useState<File[]>([]);
   const [name, setName] = useState("");
   const [category, setCategory] = useState(defaultCategory);
+  const [customCat, setCustomCat] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -37,15 +38,19 @@ export default function DocUploadModal({
       setFiles([]);
       setName("");
       setCategory(defaultCategory || "building");
+      setCustomCat("");
       setDescription("");
     }
   }, [open, defaultCategory]);
 
   if (!open) return null;
 
+  const effectiveCat =
+    category === "__new__" ? customCat.trim().toLowerCase() : category;
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!files.length || !category) return;
+    if (!files.length || !effectiveCat) return;
     const items: DocItem[] = files.map((f) => ({
       file: f,
       filename:
@@ -53,7 +58,7 @@ export default function DocUploadModal({
     }));
     setBusy(true);
     try {
-      await onSubmit(items, category, description);
+      await onSubmit(items, effectiveCat, description);
     } finally {
       setBusy(false);
     }
@@ -121,7 +126,17 @@ export default function DocUploadModal({
               {c.charAt(0).toUpperCase() + c.slice(1)}
             </option>
           ))}
+          <option value="__new__">+ New category…</option>
         </select>
+        {category === "__new__" && (
+          <input
+            type="text"
+            value={customCat}
+            onChange={(e) => setCustomCat(e.target.value)}
+            placeholder="New category name"
+            autoFocus
+          />
+        )}
 
         <label>Description (optional)</label>
         <input
@@ -134,7 +149,7 @@ export default function DocUploadModal({
         <div className="flex gap-2 pt-4">
           <button
             type="submit"
-            disabled={!files.length || busy}
+            disabled={!files.length || !effectiveCat || busy}
             className="flex-1 bg-bottle text-white rounded py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
           >
             {busy ? "Uploading…" : `Upload${files.length > 1 ? ` ${files.length}` : ""}`}

@@ -39,6 +39,8 @@ export default function ProfilePage() {
     }
   };
 
+  const [digestEnabled, setDigestEnabled] = useState(false);
+
   const loadTeam = async () => {
     try {
       const res = await fetch("/api/users");
@@ -52,6 +54,32 @@ export default function ProfilePage() {
   useEffect(() => {
     if (isOwner) loadTeam();
   }, [isOwner]);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((d) => setDigestEnabled(d.settings?.weekly_digest_enabled === true))
+      .catch(() => {});
+  }, []);
+
+  const toggleDigest = async (value: boolean) => {
+    setDigestEnabled(value);
+    // Tell the sidebar to show/hide the link right away (no reload).
+    window.dispatchEvent(new CustomEvent("kw-digest-toggle", { detail: value }));
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "weekly_digest_enabled", value, user_id: mockUser.id }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast.success(`Weekly digest ${value ? "enabled" : "disabled"}`);
+    } catch (e) {
+      setDigestEnabled(!value);
+      window.dispatchEvent(new CustomEvent("kw-digest-toggle", { detail: !value }));
+      toast.error((e as Error).message);
+    }
+  };
 
   const setGuestPasscode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,6 +441,29 @@ export default function ProfilePage() {
                   Add
                 </button>
               </form>
+            </div>
+          )}
+
+          {/* Weekly digest (owners only) */}
+          {isOwner && (
+            <div className="mb-8">
+              <h2 className="font-fraunces text-[15px] font-medium text-bottle mb-3.5 flex items-center gap-[10px]">
+                Weekly Digest
+                <span className="flex-1 h-px bg-[#E5E1D3]"></span>
+              </h2>
+              <label className="flex items-start gap-3 cursor-pointer max-w-md">
+                <input
+                  type="checkbox"
+                  checked={digestEnabled}
+                  onChange={(e) => toggleDigest(e.target.checked)}
+                  className="mt-[3px]"
+                />
+                <span className="text-[12px] text-sage">
+                  Show the <b className="text-bottle font-medium">Weekly Digest</b> page (a Sunday–Saturday
+                  summary of progress, decisions, what&apos;s coming up, and activity by area). When on, it
+                  appears in the sidebar after Calendar. Never visible to guests.
+                </span>
+              </label>
             </div>
           )}
 

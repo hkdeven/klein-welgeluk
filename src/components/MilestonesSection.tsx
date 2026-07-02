@@ -29,11 +29,13 @@ const fmtMilestone = (m: any) => {
   return fmtDay(m.milestone_date);
 };
 
-const DONE = { label: "done", dot: "#639922", bg: "#EAF3DE", fg: "#3B6D11" };
-const NEXT = { label: "next", dot: "#B5824A", bg: "#FAEEDA", fg: "#854F0B" };
-const NOW = { label: "in progress", dot: "#B5824A", bg: "#FAEEDA", fg: "#854F0B" };
-const UPCOMING = { label: "upcoming", dot: "#D3D1C7", bg: "#F1EFE8", fg: "#5F5E5A" };
-const TARGET = { label: "target", dot: "#D3D1C7", bg: "#F1EFE8", fg: "#5F5E5A" };
+// Earthy status colours (dot fill). Status is conveyed by colour + the dot mark
+// (✓ done, number upcoming, ★ goal) and a ring on the current one — no pills.
+const DONE = { dot: "#2F4030" };
+const NEXT = { dot: "#B0894F" };
+const NOW = { dot: "#B0894F" };
+const UPCOMING = { dot: "#9CA89C" };
+const TARGET = { dot: "#5C4A2E" };
 
 export default function MilestonesSection({
   canEdit,
@@ -134,17 +136,22 @@ export default function MilestonesSection({
           {items.length === 0 ? (
             <div className="fold-empty">No milestones yet.</div>
           ) : (
-            <div className="ms-line">
-              {items.map((m) => {
+            <div className="ms-spine">
+              {items.map((m, i) => {
                 const st = statusOf(m);
+                const isDone = st === DONE;
+                const isCurrent = st === NOW || st === NEXT;
+                const isTarget = st === TARGET;
+                const mark = isDone ? "✓" : isTarget ? "★" : String(i + 1);
                 return (
-                  <div className="ms-row" key={m.id}>
-                    <span className="dot" style={{ background: st.dot }} />
-                    <span className="date">{fmtMilestone(m)}</span>
-                    <span className="label">{m.title}</span>
-                    <span className="status" style={{ background: st.bg, color: st.fg }}>
-                      {st.label}
+                  <div className={`ms-step${isCurrent ? " current" : ""}`} key={m.id}>
+                    <span className="ms-dot" style={{ background: st.dot }}>
+                      {mark}
                     </span>
+                    <div className="ms-step-body">
+                      <div className="ms-step-title">{m.title}</div>
+                      <div className="ms-step-date">{fmtMilestone(m)}</div>
+                    </div>
                     {canDelete && (
                       <button className="ms-del" onClick={() => del(m.id)}>
                         ✕

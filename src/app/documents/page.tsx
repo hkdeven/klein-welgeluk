@@ -15,7 +15,7 @@ const storageUrl = (path: string) =>
 const shortDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
 
-const FILTERS = ["all", "building", "services", "exterior", "quotes"];
+const BASE_FILTERS = ["building", "services", "exterior", "quotes"];
 
 export default function DocumentsPage() {
   const { pages } = usePages();
@@ -81,6 +81,14 @@ export default function DocumentsPage() {
     }
   };
 
+  // Base categories plus any custom ones present on the loaded documents.
+  const filters = [
+    "all",
+    ...Array.from(
+      new Set([...BASE_FILTERS, ...documents.map((d: any) => d.category).filter(Boolean)])
+    ),
+  ];
+
   const visibleDocs =
     selectedFilter === "all"
       ? documents
@@ -110,7 +118,7 @@ export default function DocumentsPage() {
           {/* Filter bar */}
           <div className="flex justify-between items-center mb-[18px] gap-4 flex-wrap">
             <div className="flex gap-2 flex-wrap">
-              {FILTERS.map((filter) => (
+              {filters.map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedFilter(filter)}

@@ -451,7 +451,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       <PhotoUploadModal
         open={photoModal}
         categories={photoCats}
-        allowCustom={editMode}
+        allowCustom
         onClose={() => setPhotoModal(false)}
         uploadFile={uploadPhoto}
         addUrl={addPhotoUrl}

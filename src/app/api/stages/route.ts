@@ -109,6 +109,12 @@ export async function PATCH(request: NextRequest) {
         .eq("id", s.id);
     }
 
+    // Log the change so the Weekly Digest can report it (best-effort; the table
+    // may not exist yet — the insert simply no-ops via the ignored error).
+    await supabase
+      .from("stage_changes")
+      .insert([{ page_id, stage_name: cur.name, changed_by: moved_by || null }]);
+
     // Notify the page's assignees that its stage moved (except whoever moved it).
     try {
       const [pageRes, assignRes] = await Promise.all([

@@ -235,7 +235,7 @@ export default function PhotosPage() {
       <PhotoUploadModal
         open={modal}
         categories={photoCats}
-        allowCustom={editMode}
+        allowCustom
         onClose={() => setModal(false)}
         uploadFile={uploadPhoto}
         addUrl={addPhotoUrl}

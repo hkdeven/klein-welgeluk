@@ -1,6 +1,6 @@
 # 🏗️ Klein Welgeluk — Build Diary App
 
-[![Netlify Status](https://api.netlify.com/api/v1/badges/REPLACE-WITH-SITE-ID/deploy-status)](https://app.netlify.com/projects/klein-welgeluk/deploys)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3bef7a33-0cba-452d-8e09-5c7802e84a1e/deploy-status)](https://app.netlify.com/projects/astonishing-cranachan-f5b019/deploys)
 &nbsp;
 ![Site](https://img.shields.io/website?url=https%3A%2F%2Fkleinwelgeluk.co.za&label=kleinwelgeluk.co.za&up_message=live&up_color=2F4030&down_message=down)
 &nbsp;
@@ -9,13 +9,10 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 
 <!--
-  Deploy badge: replace REPLACE-WITH-SITE-ID above with your Netlify badge ID.
-  Grab the ready-made markdown from Netlify → Site configuration → General →
-  "Status badges" (it embeds the ID for you). The badge turns green/red with
-  each production deploy, so this README shows live deploy health on GitHub.
-  Note: the "Site" badge (shields.io) pings kleinwelgeluk.co.za for up/down.
-  Supabase has no per-project status badge; platform health lives at
-  https://status.supabase.com.
+  Deploy badge: reflects the latest production deploy (green/red) for the
+  Netlify site "astonishing-cranachan-f5b019". The "Site" badge (shields.io)
+  pings kleinwelgeluk.co.za for up/down. Supabase has no per-project status
+  badge; platform health lives at https://status.supabase.com.
 -->
 
 A collaborative web app for planning and tracking the Klein Welgeluk house build
@@ -111,6 +108,15 @@ CREATE TABLE IF NOT EXISTS snags (
 
 -- Per-user notification preferences
 ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
+
+-- Weekly digest: stage-change history + global settings (on/off toggle)
+CREATE TABLE IF NOT EXISTS stage_changes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  page_id uuid NOT NULL, stage_name text NOT NULL, changed_by uuid,
+  created_at timestamptz NOT NULL DEFAULT now());
+CREATE INDEX IF NOT EXISTS stage_changes_created_idx ON stage_changes (created_at DESC);
+CREATE TABLE IF NOT EXISTS app_settings (
+  key text PRIMARY KEY, value jsonb, updated_at timestamptz NOT NULL DEFAULT now());
 ```
 
 ## 🔐 Authentication & Roles
@@ -152,7 +158,8 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
 
 ### Navigation (left sidebar)
 - Logo/wordmark links **home**.
-- Top links: **Overview, Home, Documents (hidden for guests), Photos, Calendar**.
+- Top links: **Overview, Home, Documents (hidden for guests), Photos, Calendar**,
+  and **Weekly Digest** (only when enabled by an owner, and never for guests).
 - Building / Services / Exterior are **collapsible groups**.
 - **"+ Add page"** creates a top-level or nested page (slug auto-generated).
 
@@ -191,7 +198,8 @@ shared documents / photos / comments block.
 ### Shared documents / photos / comments block
 - **Documents** — "+ Add document" opens a modal with a pill file-picker,
   **multiple-file** upload, and a **File name** rename. Rows show uploader/date;
-  delete in edit context.
+  delete in edit context. The category dropdown includes **"+ New category…"** to
+  type a custom category at upload time (same for photos).
 - **Photo gallery** — masonry of transform-sized thumbnails with a footer strip
   (caption, author, 💬 comment + reaction counts). "+ Add photos" uses the same
   pill picker (multi-file or add-by-URL). Category filter pills appear when there
@@ -222,6 +230,19 @@ Events with optional time/description; Day / Week / Month / Year (2 months per
 row on mobile). **Tag users** on an event → they get a notification and see it in
 Home "Upcoming events". Click an event for the popup (shows creator); the
 **author can edit** their event.
+
+### Weekly Digest (`/weekly-digest`)
+A standalone **Sunday–Saturday** summary with prev/next week navigation. Top row:
+**Progress** (stage changes only), **Decisions** (logged that week), and **Coming
+up** (events in the following 7 days) — each colour-delineated. Below, **Activity
+by area**: one clickable card per sub-page that had activity, summarising photos,
+comments, docs, decisions, snags fixed/new, and stage moves with the app's muted
+activity-type colours. **Owner-toggleable** (Profile → Weekly Digest, stored in
+`app_settings.weekly_digest_enabled`): when on it appears in the sidebar (after
+Calendar) **immediately** for **all signed-in users** (owners and collaborators)
+— **never for guests**. The toggle is owner-only; the page is visible to any
+non-guest. Progress is powered by the `stage_changes` log (written whenever a
+stage is set current).
 
 ### Notifications
 In-app bell (polls; marks read on open; **✕ to dismiss**). Types:
@@ -284,6 +305,8 @@ src/
 | `/api/snags` | GET, POST, PATCH, DELETE | Snag list |
 | `/api/activity` | GET | Aggregated recent-activity feed (comments, photos, documents, events, pages, page assignments) |
 | `/api/search` | GET (`?q=`, `&guest=1`) | Global search across pages, milestones, decisions, snags, photos, documents, comments |
+| `/api/digest` | GET (`?start=&end=`) | Weekly digest aggregation for a Sun–Sat week |
+| `/api/settings` | GET, PATCH (owner-only) | Global app settings (e.g. `weekly_digest_enabled`) |
 | `/api/users`, `/api/users/[id]`, `/api/users/resolve` | GET/POST, PATCH/DELETE, POST | Team; PATCH accepts `notif_prefs`; resolve maps auth → user (invite-only) |
 | `/api/guest-passcode`, `/api/auth/guest-verify` | POST | Set / verify guest passcode |
 
@@ -293,7 +316,8 @@ src/
 `carousel_photos`, `costing`, `comments` (+`photo_id`; `page_id` nullable),
 `calendar_events` (+`tagged_user_ids`), `users` (+`notif_prefs`; includes a
 `role = guest` user), `guest_passcode`, `stages`, `notifications`, `reactions`
-(unique on `photo_id,user_id,emoji`), `milestones`, `decisions`, `snags`.
+(unique on `photo_id,user_id,emoji`), `milestones`, `decisions`, `snags`,
+`stage_changes` (stage-move log for the digest), `app_settings` (key/value).
 No FK constraints on the newer tables, so the API joins author/page/fixer names
 manually. Snag photos are real `photos` rows referenced by `snags.photo_id`.
 
@@ -305,12 +329,8 @@ pending migrations (above) since local and prod share one Supabase project.
 
 ## 🧭 Backlog / Not Yet Built
 
-- **Weekly digest** on the home page (design parked).
 - **"On this day"** photo memories (3/6/12-month lookback) — designed, dormant
   until there are old-enough photos.
-- **Instagram cross-post** of a photo to the @kleinwelgeluk account (needs an
-  Instagram **Business** account + Meta app/token; publish restricted to Deven +
-  Wernardt via a per-user `users.can_instagram` flag).
 
 ## 📄 License
 

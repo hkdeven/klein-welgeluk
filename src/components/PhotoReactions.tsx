@@ -1,18 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 
-const QUICK = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+// Full emoji picker (all emoji + search), loaded client-side only and on demand.
+const EmojiPicker = dynamic(() => import("@emoji-mart/react"), { ssr: false });
 
-// A broad library for the "＋" picker (no dependency — a curated spread).
-const LIBRARY = [
-  "😀","😃","😄","😁","😊","🙂","😍","😘","😎","🤩","🥳","😇","🤗","🤔","😅","😂",
-  "🤣","😉","😌","😴","😮","😯","😲","🙄","😬","😢","😭","😤","😱","🤯","🥺","😋",
-  "👍","👎","👏","🙌","🤝","🙏","💪","✌️","🤞","👌","🤙","👋","🫶","🤟","☝️","✋",
-  "❤️","🧡","💛","💚","💙","💜","🖤","🤍","💯","🔥","✨","⭐","🌟","🎉","🎊","🏆",
-  "🏠","🏡","🏗️","🧱","🔨","🪚","🪜","🚧","🪵","🧰","🚪","🪟","🌿","🌳","🌞","👀",
-];
+const QUICK = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 interface Row {
   user_id: string;
@@ -31,6 +26,14 @@ export default function PhotoReactions({
   const userId = user?.id;
   const [rows, setRows] = useState<Row[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [emojiData, setEmojiData] = useState<any>(null);
+
+  // Load the emoji dataset the first time the picker is opened.
+  useEffect(() => {
+    if (pickerOpen && !emojiData) {
+      import("@emoji-mart/data").then((m) => setEmojiData(m.default)).catch(() => {});
+    }
+  }, [pickerOpen, emojiData]);
 
   useEffect(() => {
     let active = true;
@@ -110,13 +113,19 @@ export default function PhotoReactions({
                   </button>
                 ))}
               </div>
-              <div className="lib">
-                {LIBRARY.map((e, i) => (
-                  <button key={`${e}-${i}`} onClick={() => react(e)}>
-                    {e}
-                  </button>
-                ))}
-              </div>
+              {emojiData && (
+                <EmojiPicker
+                  data={emojiData}
+                  onEmojiSelect={(e: any) => react(e.native)}
+                  theme="light"
+                  previewPosition="none"
+                  searchPosition="sticky"
+                  skinTonePosition="search"
+                  dynamicWidth={true}
+                  maxFrequentRows={1}
+                  navPosition="top"
+                />
+              )}
             </div>
           )}
         </div>
