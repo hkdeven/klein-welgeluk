@@ -74,7 +74,19 @@ export default function PhotoModal({
   const [caption, setCaption] = useState(photo.caption || "");
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(photo.caption || "");
+  const [mentionUsers, setMentionUsers] = useState<any[]>([]);
+  const [mention, setMention] = useState<{ items: any[]; index: number; start: number } | null>(
+    null
+  );
   const bodyRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then((d) => setMentionUsers(d.users || []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -107,6 +119,58 @@ export default function PhotoModal({
       }
     } catch {
       /* ignore */
+    }
+  };
+
+  // @mention autocomplete for the comment input.
+  const onCommentChange = (value: string, caret: number) => {
+    setNewComment(value);
+    const before = value.slice(0, caret);
+    const m = before.match(/(^|\s)@(\w*)$/);
+    if (!m || !mentionUsers.length) return setMention(null);
+    const q = m[2].toLowerCase();
+    const items = mentionUsers
+      .filter(
+        (u) =>
+          u.short_name?.toLowerCase().startsWith(q) ||
+          u.display_name?.toLowerCase().startsWith(q)
+      )
+      .slice(0, 6);
+    if (!items.length) return setMention(null);
+    setMention({ items, index: 0, start: caret - m[2].length - 1 });
+  };
+
+  const pickMention = (u: any) => {
+    if (!mention) return;
+    const caret = inputRef.current?.selectionStart ?? newComment.length;
+    const before = newComment.slice(0, mention.start);
+    const after = newComment.slice(caret);
+    const inserted = `@${u.short_name} `;
+    setNewComment(before + inserted + after);
+    setMention(null);
+    const pos = before.length + inserted.length;
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(pos, pos);
+    });
+  };
+
+  const onCommentKeyDown = (e: React.KeyboardEvent) => {
+    if (!mention) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setMention({ ...mention, index: (mention.index + 1) % mention.items.length });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setMention({
+        ...mention,
+        index: (mention.index - 1 + mention.items.length) % mention.items.length,
+      });
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      pickMention(mention.items[mention.index]);
+    } else if (e.key === "Escape") {
+      setMention(null);
     }
   };
 
@@ -212,11 +276,34 @@ export default function PhotoModal({
           </div>
 
           {signedIn ? (
-            <form className="pm-footer" onSubmit={addComment}>
+            <form className="pm-footer" onSubmit={addComment} style={{ position: "relative" }}>
+              {mention && (
+                <ul className="pm-mention">
+                  {mention.items.map((u, i) => (
+                    <li key={u.id}>
+                      <button
+                        type="button"
+                        className={i === mention.index ? "active" : ""}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          pickMention(u);
+                        }}
+                      >
+                        <b>@{u.short_name}</b>
+                        {u.display_name && u.display_name !== u.short_name && (
+                          <span> · {u.display_name}</span>
+                        )}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <input
+                ref={inputRef}
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment… (@name to tag)"
+                onChange={(e) => onCommentChange(e.target.value, e.target.selectionStart ?? e.target.value.length)}
+                onKeyDown={onCommentKeyDown}
+                placeholder="Add a comment… (@ to tag)"
               />
               <button type="submit" disabled={!newComment.trim()}>
                 Post

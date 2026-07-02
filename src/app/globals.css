@@ -556,6 +556,20 @@ main {
 .pm-footer button { border: none; background: none; color: #5C7A5E; font-weight: 600; font-size: 12.5px; cursor: pointer; }
 .pm-footer button:disabled { color: #C7CEC0; cursor: default; }
 .pm-footer-note { color: #9CA89C; font-size: 12px; justify-content: center; }
+.pm-mention {
+  position: absolute; bottom: calc(100% + 4px); left: 12px; right: 12px;
+  max-height: 190px; overflow-y: auto; background: #fff; border: 1px solid #ECE8DC;
+  border-radius: 8px; box-shadow: 0 8px 30px rgba(43,64,48,0.18); padding: 4px;
+  margin: 0; list-style: none; z-index: 20;
+}
+.pm-mention li { list-style: none; }
+.pm-mention button {
+  display: block; width: 100%; text-align: left; border: none; background: none;
+  padding: 7px 10px; border-radius: 6px; font-size: 12.5px; color: #1E2B1F; cursor: pointer;
+}
+.pm-mention button.active, .pm-mention button:hover { background: #F1EFE8; }
+.pm-mention b { color: var(--bottle); }
+.pm-mention span { color: var(--sage); }
 
 @media (max-width: 640px) {
   /* Use dynamic viewport height so the comment box/footer isn't hidden behind

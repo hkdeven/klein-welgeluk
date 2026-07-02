@@ -167,8 +167,10 @@ shared documents / photos / comments block.
   are photos.
 - Clicking a photo opens the **Instagram-style photo view** (`PhotoModal`):
   large image + panel with caption (owner-editable), **reactions**, and a
-  **comment thread**. Mobile uses `100dvh` so the composer isn't hidden.
-- **Comments** — rich text with **@mention autocomplete** (notifies the person).
+  **comment thread** with **@mention autocomplete** (notifies the person).
+  Mobile uses `100dvh` so the composer isn't hidden.
+- **Comments** (page + photo) — **@mention autocomplete** on both; picking a
+  name notifies them (works on mobile).
 
 ### Reactions
 WhatsApp-style: a quick emoji row plus a full picker. A user can add **multiple**
@@ -270,8 +272,6 @@ pending migrations (above) since local and prod share one Supabase project.
   until there are old-enough photos.
 - **Global search** across pages/comments/docs/photos.
 - **Instagram cross-post** of a photo to the @kleinwelgeluk account.
-- Photo-comment **@mention autocomplete** (tagging works by typing `@shortname`;
-  no dropdown picker yet).
 
 ## License
 
