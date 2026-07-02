@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { notifyUsers } from "@/lib/notify";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     if (!supabase) {
       return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
     }
-    const { page_id, user_id } = await request.json();
+    const { page_id, user_id, assigned_by } = await request.json();
     if (!page_id || !user_id) {
       return NextResponse.json({ error: "page_id and user_id are required" }, { status: 400 });
     }
@@ -60,6 +61,24 @@ export async function POST(request: NextRequest) {
       .select("*, user:user_id(id, display_name, short_name, role)")
       .single();
     if (error) throw error;
+
+    // Notify the assignee (always-on — not user-toggleable).
+    try {
+      const pg = await supabase.from("pages").select("title, slug").eq("id", page_id).single();
+      await notifyUsers([
+        {
+          user_id,
+          actor_id: assigned_by || null,
+          type: "assigned",
+          title: "You were assigned to a page",
+          body: pg.data?.title || "",
+          link: `/${pg.data?.slug || ""}`,
+          ref_id: page_id,
+        },
+      ]);
+    } catch (e) {
+      console.error("Assign notify error:", (e as Error).message);
+    }
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {

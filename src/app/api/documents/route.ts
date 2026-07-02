@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from("documents")
-      .select("*, uploader:uploaded_by(short_name)")
+      .select("*, uploader:uploaded_by(short_name), page:page_id(title, slug)")
       .order("created_at", { ascending: false });
 
     if (page_id) {
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     const caption = formData.get("caption") as string;
     const user_id = formData.get("user_id") as string;
     const category = formData.get("category") as string | null;
+    const displayName = (formData.get("filename") as string | null)?.trim();
 
     if (!file || !page_id) {
       return NextResponse.json(
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
     // Create document record in database
     const record: Record<string, unknown> = {
       page_id,
-      filename: file.name,
+      filename: displayName || file.name,
       storage_path: filePath,
       file_size: file.size,
       file_type: file.name.split(".").pop() || "file",

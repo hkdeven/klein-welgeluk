@@ -8,12 +8,9 @@ import PhotoUploadModal, {
 import { useToast } from "@/components/Toast";
 import { useAuth, useCurrentUser } from "@/components/AuthProvider";
 import PhotoModal from "@/components/PhotoModal";
+import { photoSrc } from "@/lib/img";
 import { useEditMode } from "@/components/EditModeContext";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
-
-const storageUrl = (path: string) =>
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
-const photoUrlOf = (p: any) => p.external_url || storageUrl(`photos/${p.storage_path}`);
 
 export default function PhotosPage() {
   const toast = useToast();
@@ -189,14 +186,14 @@ export default function PhotosPage() {
       {visible.length > 0 ? (
         <div className="masonry">
           {visible.map((p: any) => {
-            const url = photoUrlOf(p);
             const who = p.uploader?.short_name;
             const where = p.page?.title;
             const rc = reactionInfo[p.id];
             const cc = commentCounts[p.id] || 0;
             return (
               <div className="pin clickable" key={p.id} onClick={() => setModalPhoto(p)}>
-                <img src={url} alt={p.caption || ""} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoSrc(p, 700)} alt={p.caption || ""} loading="lazy" decoding="async" />
                 {p.category && <span className="tag">{labelFor(p.category)}</span>}
                 {canWrite && editMode && (
                   <button
@@ -251,7 +248,7 @@ export default function PhotosPage() {
       {modalPhoto && (
         <PhotoModal
           photo={modalPhoto}
-          url={photoUrlOf(modalPhoto)}
+          url={photoSrc(modalPhoto, 1400)}
           canEdit={isOwner}
           onClose={() => setModalPhoto(null)}
           onCaptionSaved={(id, caption) =>

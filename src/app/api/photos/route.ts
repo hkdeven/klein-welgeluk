@@ -22,6 +22,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page_id = searchParams.get("page_id");
 
+    // Photos attached to snags live in the snag list, not the photo gallery.
+    let excludeIds: string[] = [];
+    try {
+      const { data: sp } = await supabase
+        .from("snags")
+        .select("photo_id")
+        .not("photo_id", "is", null);
+      excludeIds = (sp || []).map((s: any) => s.photo_id).filter(Boolean);
+    } catch {
+      /* snags table/column may not exist yet */
+    }
+
     let query = supabase
       .from("photos")
       .select("*, uploader:uploaded_by(short_name), page:page_id(title, slug)")
@@ -29,6 +41,9 @@ export async function GET(request: NextRequest) {
 
     if (page_id) {
       query = query.eq("page_id", page_id);
+    }
+    if (excludeIds.length) {
+      query = query.not("id", "in", `(${excludeIds.join(",")})`);
     }
 
     const { data: photos, error } = await query;

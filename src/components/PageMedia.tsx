@@ -12,15 +12,13 @@ import { useAuth, useCurrentUser } from "@/components/AuthProvider";
 import { useEditMode } from "@/components/EditModeContext";
 import PhotoModal from "@/components/PhotoModal";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
+import { photoSrc } from "@/lib/img";
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
 
 const shortDate = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
-
-const photoUrlOf = (p: any) =>
-  p.external_url || storageUrl(`photos/${p.storage_path}`);
 
 interface PageMediaProps {
   pageId: string | null;
@@ -212,20 +210,27 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   };
 
   // ---- Documents ----
-  const submitDoc = async (file: File, category: string, description: string) => {
+  const submitDoc = async (
+    items: { file: File; filename: string }[],
+    category: string,
+    description: string
+  ) => {
     if (!pageId) return;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("page_id", pageId);
-      formData.append("user_id", user.id);
-      formData.append("category", category);
-      formData.append("caption", description);
-      const res = await fetch("/api/documents", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Failed to upload document");
+      for (const { file, filename } of items) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("page_id", pageId);
+        formData.append("user_id", user.id);
+        formData.append("category", category);
+        formData.append("caption", description);
+        formData.append("filename", filename);
+        const res = await fetch("/api/documents", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Failed to upload document");
+      }
       await loadDocuments(pageId);
       setDocModal(false);
-      toast.success("Document uploaded");
+      toast.success(`Uploaded ${items.length} document${items.length === 1 ? "" : "s"}`);
     } catch (err) {
       toast.error((err as Error).message);
     }
@@ -331,13 +336,13 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       {visiblePhotos.length > 0 ? (
         <div className="masonry">
           {visiblePhotos.map((p: any) => {
-            const url = photoUrlOf(p);
             const who = p.uploader?.short_name;
             const rc = reactionInfo[p.id];
             const cc = commentCounts[p.id] || 0;
             return (
               <div className="pin clickable" key={p.id} onClick={() => setModalPhoto(p)}>
-                <img src={url} alt={p.caption || ""} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={photoSrc(p, 700)} alt={p.caption || ""} loading="lazy" decoding="async" />
                 {p.category && <span className="tag">{labelFor(p.category)}</span>}
                 {canWrite && editMode && (
                   <button
@@ -447,7 +452,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
       {modalPhoto && (
         <PhotoModal
           photo={modalPhoto}
-          url={photoUrlOf(modalPhoto)}
+          url={photoSrc(modalPhoto, 1400)}
           canEdit={isOwner}
           onClose={() => setModalPhoto(null)}
           onCaptionSaved={(id, caption) =>

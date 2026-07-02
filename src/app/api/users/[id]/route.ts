@@ -24,6 +24,7 @@ export async function PATCH(
     if (typeof body.display_name === "string") updates.display_name = body.display_name;
     if (typeof body.short_name === "string") updates.short_name = body.short_name;
     if (typeof body.avatar_url === "string") updates.avatar_url = body.avatar_url;
+    if (body.notif_prefs && typeof body.notif_prefs === "object") updates.notif_prefs = body.notif_prefs;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: "Nothing to update" }, { status: 400 });

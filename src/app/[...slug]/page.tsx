@@ -166,7 +166,7 @@ export default function DynamicPage() {
       const res = await fetch("/api/assignments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: pageId, user_id: userId }),
+        body: JSON.stringify({ page_id: pageId, user_id: userId, assigned_by: mockUser.id }),
       });
       if (!res.ok) throw new Error("Failed to assign");
       const created = await res.json();
@@ -369,11 +369,6 @@ export default function DynamicPage() {
                     </div>
                   )}
                 </div>
-              )}
-
-              {/* Snag list — appears once the page is in the Snagging stage */}
-              {isSnagging && !isGuest && pageId && (
-                <SnagList pageId={pageId} canEdit={canWrite} canDelete={canWrite && editMode} />
               )}
 
               {/* Assigned + Tags */}
@@ -589,6 +584,11 @@ export default function DynamicPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Snag list — at the bottom, once the page is in the Snagging stage */}
+              {isSnagging && !isGuest && pageId && (
+                <SnagList pageId={pageId} canEdit={canWrite} canDelete={canWrite && editMode} />
               )}
             </>
           )}

@@ -37,14 +37,19 @@ export default function Topbar({
         {onEditModeChange && (
           <button
             onClick={() => onEditModeChange(!editMode)}
-            className={`flex items-center gap-[7px] border rounded-full py-1 px-3 font-mono text-[11px] ${
+            title={editMode ? "Edit mode on" : "Edit mode off"}
+            aria-label={editMode ? "Edit mode on" : "Edit mode off"}
+            className={`inline-flex items-center gap-[5px] rounded-full py-[4px] px-[10px] text-[11px] border ${
               editMode
                 ? "bg-bottle text-white border-bottle"
-                : "bg-white text-sage border-[#5c7a5e52]"
+                : "bg-[rgb(255_255_255_/_78%)] text-sage border-[#b7c4b6] hover:border-sage"
             }`}
           >
-            <span>edit mode</span>
-            <span>{editMode ? "on" : "off"}</span>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+              <path d="M13.5 6.5l4 4" />
+            </svg>
+            {editMode ? "Editing" : "Edit"}
           </button>
         )}
         {isGuest ? (

@@ -8,6 +8,7 @@ import { useEditMode } from "@/components/EditModeContext";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
 import { tagColor } from "@/lib/tagColor";
+import { photoSrc } from "@/lib/img";
 
 const storageUrl = (path: string) =>
   `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${path}`;
@@ -316,7 +317,8 @@ export default function HomePage() {
                   return (
                     <div className="slide" key={s.id}>
                       <a href={url} target="_blank" rel="noopener noreferrer">
-                        <img src={url} alt={s.caption || ""} />
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photoSrc(s, 1400)} alt={s.caption || ""} decoding="async" />
                       </a>
                       {s.caption && <div className="caption">{s.caption}</div>}
                       {canEdit && (

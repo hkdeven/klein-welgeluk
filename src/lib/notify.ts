@@ -8,7 +8,23 @@ const supabase =
     ? createClient(supabaseUrl, supabaseServiceKey)
     : null;
 
-export type NotifType = "event_tagged" | "comment" | "mention" | "stage_moved";
+export type NotifType =
+  | "event_tagged"
+  | "comment"
+  | "mention"
+  | "stage_moved"
+  | "photo_mention"
+  | "assigned";
+
+// Which notification types are user-toggleable, and their prefs key. Types not
+// listed here always send (e.g. "assigned" — being assigned a page — and
+// "event_tagged").
+const PREF_KEY: Partial<Record<NotifType, string>> = {
+  mention: "mentioned",
+  comment: "assigned_comment",
+  stage_moved: "stage_moved",
+  photo_mention: "photo_mention",
+};
 
 export interface NotifInput {
   user_id: string;
@@ -34,8 +50,25 @@ export async function notifyUsers(notifs: NotifInput[]) {
     return true;
   });
   if (!rows.length) return;
+
+  // Drop notifications the recipient has switched off in their prefs.
+  const userIds = [...new Set(rows.map((n) => n.user_id))];
+  const prefsMap: Record<string, Record<string, boolean>> = {};
+  const { data: prefRows } = await supabase
+    .from("users")
+    .select("id, notif_prefs")
+    .in("id", userIds);
+  (prefRows || []).forEach((u: any) => (prefsMap[u.id] = u.notif_prefs || {}));
+
+  const finalRows = rows.filter((n) => {
+    const key = PREF_KEY[n.type as NotifType];
+    if (!key) return true; // always-on types
+    return prefsMap[n.user_id]?.[key] !== false; // default on
+  });
+  if (!finalRows.length) return;
+
   try {
-    const { error } = await supabase.from("notifications").insert(rows);
+    const { error } = await supabase.from("notifications").insert(finalRows);
     if (error) console.error("notifyUsers insert error:", error.message);
   } catch (e) {
     console.error("notifyUsers error:", (e as Error).message);

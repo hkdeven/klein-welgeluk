@@ -4,12 +4,20 @@ import { useEffect, useRef, useState } from "react";
 
 export const DOC_CATEGORIES = ["building", "services", "exterior", "quotes"];
 
+export interface DocItem {
+  file: File;
+  filename: string;
+}
+
 interface DocUploadModalProps {
   open: boolean;
   defaultCategory?: string;
   onClose: () => void;
-  onSubmit: (file: File, category: string, description: string) => Promise<void> | void;
+  onSubmit: (items: DocItem[], category: string, description: string) => Promise<void> | void;
 }
+
+const baseName = (n: string) => n.replace(/\.[^.]+$/, "");
+const extOf = (n: string) => (n.includes(".") ? n.slice(n.lastIndexOf(".")) : "");
 
 export default function DocUploadModal({
   open,
@@ -17,16 +25,17 @@ export default function DocUploadModal({
   onClose,
   onSubmit,
 }: DocUploadModalProps) {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [name, setName] = useState("");
   const [category, setCategory] = useState(defaultCategory);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Reset fields each time the modal opens.
   useEffect(() => {
     if (open) {
-      setFile(null);
+      setFiles([]);
+      setName("");
       setCategory(defaultCategory || "building");
       setDescription("");
     }
@@ -36,10 +45,15 @@ export default function DocUploadModal({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file || !category) return;
+    if (!files.length || !category) return;
+    const items: DocItem[] = files.map((f) => ({
+      file: f,
+      filename:
+        files.length === 1 && name.trim() ? name.trim() + extOf(f.name) : f.name,
+    }));
     setBusy(true);
     try {
-      await onSubmit(file, category, description);
+      await onSubmit(items, category, description);
     } finally {
       setBusy(false);
     }
@@ -48,22 +62,55 @@ export default function DocUploadModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <form className="modal-card" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <h3>Upload document</h3>
+        <h3>Upload document{files.length > 1 ? "s" : ""}</h3>
 
-        <label>File</label>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full border border-[#D7DECF] rounded px-3 py-2 text-[13px] text-left text-sage hover:bg-whitewash"
-        >
-          {file ? file.name : "Choose a file…"}
-        </button>
+        <label>File{files.length > 1 ? "s" : ""}</label>
+        <div className="doc-file-row">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="doc-file-pill"
+          >
+            {files.length ? "+ Add more" : "+ Choose files"}
+          </button>
+          {files.map((f, i) => (
+            <span className="doc-file-chip" key={`${f.name}-${i}`}>
+              {f.name}
+              <span
+                className="x"
+                onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+              >
+                ✕
+              </span>
+            </span>
+          ))}
+        </div>
         <input
           ref={fileRef}
           type="file"
+          multiple
           className="hidden"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          onChange={(e) => {
+            const fs = Array.from(e.target.files || []);
+            if (!fs.length) return;
+            setFiles((prev) => [...prev, ...fs]);
+            if (files.length === 0 && fs.length === 1) setName(baseName(fs[0].name));
+            else setName("");
+            e.target.value = "";
+          }}
         />
+
+        {files.length === 1 && (
+          <>
+            <label>File name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Document name"
+            />
+          </>
+        )}
 
         <label>
           Category <span style={{ color: "var(--brass)" }}>*</span>
@@ -87,10 +134,10 @@ export default function DocUploadModal({
         <div className="flex gap-2 pt-4">
           <button
             type="submit"
-            disabled={!file || busy}
+            disabled={!files.length || busy}
             className="flex-1 bg-bottle text-white rounded py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
           >
-            {busy ? "Uploading…" : "Upload"}
+            {busy ? "Uploading…" : `Upload${files.length > 1 ? ` ${files.length}` : ""}`}
           </button>
           <button
             type="button"

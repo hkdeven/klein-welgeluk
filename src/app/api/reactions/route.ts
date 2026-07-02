@@ -57,9 +57,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    // A user can add multiple different emoji to one photo; the same emoji twice
+    // is a no-op (unique on photo_id,user_id,emoji).
     const { data, error } = await supabase
       .from("reactions")
-      .upsert({ photo_id, user_id, emoji }, { onConflict: "photo_id,user_id" })
+      .upsert({ photo_id, user_id, emoji }, { onConflict: "photo_id,user_id,emoji" })
       .select()
       .single();
     if (error) throw error;
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Remove a user's reaction from a photo.
+// Remove a user's reaction. With ?emoji= removes just that one; without, all theirs.
 export async function DELETE(request: NextRequest) {
   try {
     if (!supabase) {
@@ -80,14 +82,13 @@ export async function DELETE(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const photo_id = searchParams.get("photo_id");
     const user_id = searchParams.get("user_id");
+    const emoji = searchParams.get("emoji");
     if (!photo_id || !user_id) {
       return NextResponse.json({ error: "photo_id and user_id are required" }, { status: 400 });
     }
-    const { error } = await supabase
-      .from("reactions")
-      .delete()
-      .eq("photo_id", photo_id)
-      .eq("user_id", user_id);
+    let q = supabase.from("reactions").delete().eq("photo_id", photo_id).eq("user_id", user_id);
+    if (emoji) q = q.eq("emoji", emoji);
+    const { error } = await q;
     if (error) throw error;
     return NextResponse.json({ success: true });
   } catch (error) {

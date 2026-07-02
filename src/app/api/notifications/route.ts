@@ -82,3 +82,24 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: `Update error: ${msg}` }, { status: 500 });
   }
 }
+
+// Dismiss a notification: ?id=<id> for one, or ?user_id=<id>&all=1 to clear all.
+export async function DELETE(request: NextRequest) {
+  try {
+    if (!supabase) {
+      return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
+    }
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const user_id = searchParams.get("user_id");
+    let q = supabase.from("notifications").delete();
+    if (id) q = q.eq("id", id);
+    else if (user_id) q = q.eq("user_id", user_id);
+    else return NextResponse.json({ error: "id or user_id required" }, { status: 400 });
+    const { error } = await q;
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+  }
+}

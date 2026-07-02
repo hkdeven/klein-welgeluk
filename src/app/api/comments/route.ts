@@ -140,6 +140,45 @@ export async function POST(request: NextRequest) {
       console.error("Comment notify error:", (e as Error).message);
     }
 
+    // Photo comments: notify anyone @mentioned (type "photo_mention").
+    if (photo_id && !page_id) try {
+      const text = plainText(body);
+      const tokens = new Set(
+        (text.match(/@([a-z0-9_]+)/gi) || []).map((t) => t.slice(1).toLowerCase())
+      );
+      if (tokens.size) {
+        const [photoRes, usersRes] = await Promise.all([
+          supabase.from("photos").select("page_id").eq("id", photo_id).single(),
+          supabase.from("users").select("id, short_name"),
+        ]);
+        let slug = "";
+        if (photoRes.data?.page_id) {
+          const pg = await supabase
+            .from("pages")
+            .select("slug")
+            .eq("id", photoRes.data.page_id)
+            .single();
+          slug = pg.data?.slug || "";
+        }
+        const notifs: NotifInput[] = (usersRes.data || [])
+          .filter((u: any) => u.short_name && tokens.has(u.short_name.toLowerCase()))
+          .map((u: any) => u.id as string)
+          .filter((uid: string) => uid !== author_id)
+          .map((uid: string) => ({
+            user_id: uid,
+            actor_id: author_id,
+            type: "photo_mention" as const,
+            title: "You were tagged in a photo comment",
+            body: plainText(body).slice(0, 120),
+            link: slug ? `/${slug}` : "/photos",
+            ref_id: photo_id,
+          }));
+        await notifyUsers(notifs);
+      }
+    } catch (e) {
+      console.error("Photo comment notify error:", (e as Error).message);
+    }
+
     return NextResponse.json(newComment, { status: 201 });
   } catch (error) {
     const msg = (error as Error).message;

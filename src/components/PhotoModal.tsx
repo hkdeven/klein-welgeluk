@@ -216,7 +216,7 @@ export default function PhotoModal({
               <input
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment…"
+                placeholder="Add a comment… (@name to tag)"
               />
               <button type="submit" disabled={!newComment.trim()}>
                 Post

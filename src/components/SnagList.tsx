@@ -4,10 +4,7 @@ import { useEffect, useState } from "react";
 import { useCurrentUser } from "@/components/AuthProvider";
 import PhotoModal from "@/components/PhotoModal";
 import { uploadToStorage, sanitizeName } from "@/lib/upload";
-
-const photoUrl = (p: any) =>
-  p.external_url ||
-  `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/photos/${p.storage_path}`;
+import { photoSrc } from "@/lib/img";
 
 const fmtDate = (d?: string) =>
   d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
@@ -134,7 +131,7 @@ export default function SnagList({ pageId, canEdit, canDelete }: Props) {
                 {s.photo ? (
                   <button className="snag-thumb" onClick={() => setModalPhoto(s.photo)} title="View photo">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photoUrl(s.photo)} alt="" />
+                    <img src={photoSrc(s.photo, 90)} alt="" loading="lazy" decoding="async" />
                   </button>
                 ) : (
                   canEdit && (
@@ -203,7 +200,7 @@ export default function SnagList({ pageId, canEdit, canDelete }: Props) {
       {modalPhoto && (
         <PhotoModal
           photo={modalPhoto}
-          url={photoUrl(modalPhoto)}
+          url={photoSrc(modalPhoto, 1400)}
           canEdit={isOwner}
           onClose={() => setModalPhoto(null)}
           onCaptionSaved={(id, caption) =>

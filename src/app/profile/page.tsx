@@ -17,11 +17,27 @@ export default function ProfilePage() {
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [cropFile, setCropFile] = useState<File | null>(null);
   const avatarRef = useRef<HTMLInputElement>(null);
-  const [notifications, setNotifications] = useState({
-    mentioned: true,
-    assigned: true,
-    stage_moved: true,
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({
+    mentioned: mockUser.notif_prefs?.mentioned !== false,
+    assigned_comment: mockUser.notif_prefs?.assigned_comment !== false,
+    stage_moved: mockUser.notif_prefs?.stage_moved !== false,
+    photo_mention: mockUser.notif_prefs?.photo_mention !== false,
   });
+
+  const setPref = async (key: string, value: boolean) => {
+    const next = { ...prefs, [key]: value };
+    setPrefs(next);
+    updateUser({ notif_prefs: next });
+    try {
+      await fetch(`/api/users/${mockUser.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notif_prefs: next }),
+      });
+    } catch {
+      /* ignore */
+    }
+  };
 
   const loadTeam = async () => {
     try {
@@ -181,9 +197,9 @@ export default function ProfilePage() {
           </div>
 
           {/* Profile grid */}
-          <div className="grid grid-cols-[200px_1fr] gap-9 mb-8">
-            {/* Left: Avatar */}
-            <div>
+          <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] gap-6 sm:gap-9 mb-8">
+            {/* Left: Avatar (centered on mobile) */}
+            <div className="flex flex-col items-center sm:block">
               <div className="w-40 h-40 rounded-full bg-[#D6DCD3] overflow-hidden flex items-center justify-center text-bottle font-fraunces text-[54px] mb-3.5">
                 {mockUser.avatar_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -289,52 +305,28 @@ export default function ProfilePage() {
               <span className="flex-1 h-px bg-[#E5E1D3]"></span>
             </h2>
             <div className="space-y-3">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.mentioned}
-                  onChange={(e) =>
-                    setNotifications({
-                      ...notifications,
-                      mentioned: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <span className="text-[13px] text-pine">@mentioned</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.assigned}
-                  onChange={(e) =>
-                    setNotifications({
-                      ...notifications,
-                      assigned: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
+              <label className="flex items-center gap-2 opacity-70">
+                <input type="checkbox" checked disabled className="w-4 h-4" />
                 <span className="text-[13px] text-pine">
-                  Comment on assigned page
+                  Assigned to a page <span className="text-mist text-[11px]">(always on)</span>
                 </span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={notifications.stage_moved}
-                  onChange={(e) =>
-                    setNotifications({
-                      ...notifications,
-                      stage_moved: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4"
-                />
-                <span className="text-[13px] text-pine">
-                  Stage moved on assigned page
-                </span>
-              </label>
+              {[
+                { key: "mentioned", label: "@mentioned in a comment" },
+                { key: "assigned_comment", label: "Comment on a page you're assigned to" },
+                { key: "stage_moved", label: "Stage moved on an assigned page" },
+                { key: "photo_mention", label: "Tagged in a photo comment" },
+              ].map((o) => (
+                <label key={o.key} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={prefs[o.key] !== false}
+                    onChange={(e) => setPref(o.key, e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-[13px] text-pine">{o.label}</span>
+                </label>
+              ))}
             </div>
           </div>
 

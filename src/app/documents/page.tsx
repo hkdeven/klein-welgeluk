@@ -28,34 +28,43 @@ export default function DocumentsPage() {
   const [pageId, setPageId] = useState<string | null>(null);
   const [docModal, setDocModal] = useState(false);
 
-  const loadDocuments = async (id: string) => {
-    const res = await fetch(`/api/documents?page_id=${id}`);
+  // Show every document across the whole project, tagged with its source page.
+  const loadDocuments = async () => {
+    const res = await fetch(`/api/documents`);
     const data = await res.json();
     setDocuments(data.documents || []);
   };
 
   useEffect(() => {
-    if (!pages.length) return;
-    const firstPageId = pages[0]?.id;
-    if (!firstPageId) return;
-    setPageId(firstPageId);
-    loadDocuments(firstPageId).catch(() => {});
+    // Upload target: the dedicated "documents" page if present, else the first page.
+    if (pages.length) {
+      const docsPage = pages.find((p: any) => p.slug === "documents") || pages[0];
+      setPageId(docsPage?.id || null);
+    }
+    loadDocuments().catch(() => {});
   }, [pages]);
 
-  const submitDoc = async (file: File, category: string, description: string) => {
+  const submitDoc = async (
+    items: { file: File; filename: string }[],
+    category: string,
+    description: string
+  ) => {
     if (!pageId) return;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("page_id", pageId);
-      formData.append("user_id", mockUser.id);
-      formData.append("category", category);
-      formData.append("caption", description);
-      const res = await fetch("/api/documents", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
-      await loadDocuments(pageId);
+      for (const { file, filename } of items) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("page_id", pageId);
+        formData.append("user_id", mockUser.id);
+        formData.append("category", category);
+        formData.append("caption", description);
+        formData.append("filename", filename);
+        const res = await fetch("/api/documents", { method: "POST", body: formData });
+        if (!res.ok) throw new Error("Upload failed");
+      }
+      await loadDocuments();
       setDocModal(false);
-      toast.success("Document uploaded");
+      toast.success(`Uploaded ${items.length} document${items.length === 1 ? "" : "s"}`);
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -142,10 +151,19 @@ export default function DocumentsPage() {
                   </b>
                   <span>
                     Uploaded by {doc.uploader?.short_name || "—"} · {shortDate(doc.created_at)}
+                    {doc.page?.title && (
+                      <>
+                        {" · in "}
+                        <a href={`/${doc.page.slug}`} className="underline hover:text-bottle">
+                          {doc.page.title}
+                        </a>
+                      </>
+                    )}
                     {doc.caption ? ` — ${doc.caption}` : ""}
                   </span>
                 </div>
                 <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  {doc.page?.title && <span className="tag-chip">{doc.page.title}</span>}
                   {doc.category && <span className="tag-chip">{doc.category}</span>}
                   {canWrite && (
                     <span className="del-badge" onClick={() => deleteDocument(doc.id)}>

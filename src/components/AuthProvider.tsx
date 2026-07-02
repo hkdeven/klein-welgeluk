@@ -10,6 +10,7 @@ export interface AppUser {
   role: string;
   avatar_url: string | null;
   email?: string;
+  notif_prefs?: Record<string, boolean> | null;
 }
 
 // Placeholder used only in the brief window before auth resolves (AppFrame

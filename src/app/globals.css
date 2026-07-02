@@ -148,7 +148,7 @@ a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 4px 52px 3px;
+  padding: 10px 52px;
 }
 
 main {
@@ -365,6 +365,22 @@ main {
 
 .rte-content ul { list-style: disc; padding-left: 22px; margin: 6px 0; }
 
+/* Document upload — file pill + selected-file chips */
+.doc-file-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.doc-file-pill {
+  display: inline-flex; align-items: center; border: 1px solid #D7DECF;
+  border-radius: 20px; padding: 5px 14px; font-size: 12.5px; color: var(--sage);
+  background: #fff; cursor: pointer;
+}
+.doc-file-pill:hover { background: var(--whitewash); border-color: var(--sage); }
+.doc-file-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  background: #EEF1EC; border: 1px solid #D7DECF; border-radius: 20px;
+  padding: 4px 10px; font-size: 11.5px; color: var(--pine);
+}
+.doc-file-chip .x { color: var(--mist); cursor: pointer; font-size: 11px; }
+.doc-file-chip .x:hover { color: #B5524F; }
+
 /* @mention autocomplete */
 .mention-menu {
   z-index: 1100;
@@ -542,10 +558,12 @@ main {
 .pm-footer-note { color: #9CA89C; font-size: 12px; justify-content: center; }
 
 @media (max-width: 640px) {
-  .pm-overlay { padding: 0; }
-  .pm-modal { flex-direction: column; width: 100vw; max-height: 100vh; height: 100vh; border-radius: 0; }
-  .pm-image { flex: none; max-height: 46vh; }
-  .pm-image img { max-height: 46vh; }
+  /* Use dynamic viewport height so the comment box/footer isn't hidden behind
+     the mobile browser's bottom chrome. */
+  .pm-overlay { padding: 0; align-items: stretch; height: 100vh; height: 100dvh; }
+  .pm-modal { flex-direction: column; width: 100vw; height: 100vh; height: 100dvh; max-height: 100dvh; border-radius: 0; }
+  .pm-image { flex: none; max-height: 42vh; max-height: 42dvh; }
+  .pm-image img { max-height: 42vh; max-height: 42dvh; }
   .pm-panel { width: 100%; flex: 1; max-height: none; border-left: none; border-top: 1px solid #ECE8DC; min-height: 0; }
 }
 

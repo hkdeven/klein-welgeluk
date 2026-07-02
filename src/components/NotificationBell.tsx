@@ -86,6 +86,13 @@ export default function NotificationBell() {
     if (n.link) router.push(n.link);
   };
 
+  const dismiss = (e: React.MouseEvent, n: Notif) => {
+    e.stopPropagation();
+    setItems((prev) => prev.filter((x) => x.id !== n.id));
+    if (!n.read_at) setUnread((u) => Math.max(0, u - 1));
+    fetch(`/api/notifications?id=${n.id}`, { method: "DELETE" }).catch(() => {});
+  };
+
   const wrapRef = useRef<HTMLDivElement>(null);
 
   if (!signedIn) return null;
@@ -95,14 +102,14 @@ export default function NotificationBell() {
       <button
         onClick={togglePanel}
         aria-label="Notifications"
-        className="relative flex items-center justify-center w-8 h-8 text-sage hover:text-bottle"
+        className="relative flex items-center justify-center w-7 h-7 text-sage hover:text-bottle"
       >
-        <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10 2.5a4.5 4.5 0 0 0-4.5 4.5c0 3.5-1.5 4.8-1.5 4.8h12s-1.5-1.3-1.5-4.8A4.5 4.5 0 0 0 10 2.5Z" />
-          <path d="M8.5 15a1.6 1.6 0 0 0 3 0" />
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" />
+          <path d="M9 17v1a3 3 0 0 0 6 0v-1" />
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brass text-white text-[9px] font-semibold flex items-center justify-center">
+          <span className="absolute -top-1 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-brass text-white text-[9px] font-semibold flex items-center justify-center">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -123,12 +130,15 @@ export default function NotificationBell() {
             ) : (
               <ul>
                 {items.map((n) => (
-                  <li key={n.id}>
-                    <button
+                  <li
+                    key={n.id}
+                    className={`flex items-stretch border-b border-[#F2EFE6] ${
+                      n.read_at ? "" : "bg-[#FBF8F2]"
+                    }`}
+                  >
+                    <div
                       onClick={() => openItem(n)}
-                      className={`w-full text-left px-4 py-3 border-b border-[#F2EFE6] hover:bg-whitewash flex gap-2.5 ${
-                        n.read_at ? "" : "bg-[#FBF8F2]"
-                      }`}
+                      className="flex-1 min-w-0 cursor-pointer px-4 py-3 hover:bg-whitewash flex gap-2.5"
                     >
                       <span
                         className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${
@@ -148,6 +158,13 @@ export default function NotificationBell() {
                           {timeAgo(n.created_at)}
                         </span>
                       </span>
+                    </div>
+                    <button
+                      onClick={(e) => dismiss(e, n)}
+                      aria-label="Dismiss notification"
+                      className="px-3 text-mist hover:text-bottle text-[12px] flex-shrink-0"
+                    >
+                      ✕
                     </button>
                   </li>
                 ))}

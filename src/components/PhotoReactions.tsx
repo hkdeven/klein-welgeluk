@@ -46,7 +46,8 @@ export default function PhotoReactions({
     };
   }, [photoId]);
 
-  const myEmoji = rows.find((r) => r.user_id === userId)?.emoji;
+  // A user may add several different emoji to one photo.
+  const mine = new Set(rows.filter((r) => r.user_id === userId).map((r) => r.emoji));
 
   const grouped: Record<string, number> = {};
   rows.forEach((r) => (grouped[r.emoji] = (grouped[r.emoji] || 0) + 1));
@@ -55,13 +56,14 @@ export default function PhotoReactions({
   const react = async (emoji: string) => {
     if (!signedIn || !userId) return;
     setPickerOpen(false);
-    if (myEmoji === emoji) {
-      setRows((prev) => prev.filter((r) => r.user_id !== userId));
-      await fetch(`/api/reactions?photo_id=${photoId}&user_id=${userId}`, {
-        method: "DELETE",
-      }).catch(() => {});
+    if (mine.has(emoji)) {
+      setRows((prev) => prev.filter((r) => !(r.user_id === userId && r.emoji === emoji)));
+      await fetch(
+        `/api/reactions?photo_id=${photoId}&user_id=${userId}&emoji=${encodeURIComponent(emoji)}`,
+        { method: "DELETE" }
+      ).catch(() => {});
     } else {
-      setRows((prev) => [...prev.filter((r) => r.user_id !== userId), { user_id: userId, emoji }]);
+      setRows((prev) => [...prev, { user_id: userId, emoji }]);
       await fetch("/api/reactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -77,7 +79,7 @@ export default function PhotoReactions({
         <button
           key={emoji}
           onClick={() => react(emoji)}
-          className={`react-chip ${myEmoji === emoji ? "mine" : ""}`}
+          className={`react-chip ${mine.has(emoji) ? "mine" : ""}`}
           disabled={!signedIn}
         >
           <span>{emoji}</span>

@@ -116,20 +116,38 @@ export default function PhotoUploadModal({
         )}
 
         <label>Photos (you can pick several)</label>
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full border border-[#D7DECF] rounded px-3 py-2 text-[13px] text-left text-sage hover:bg-whitewash"
-        >
-          {files.length ? `${files.length} file(s) selected` : "Choose photos…"}
-        </button>
+        <div className="doc-file-row">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="doc-file-pill"
+          >
+            {files.length ? "+ Add more" : "+ Choose photos"}
+          </button>
+          {files.map((f, i) => (
+            <span className="doc-file-chip" key={`${f.name}-${i}`}>
+              {f.name}
+              <span
+                className="x"
+                onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
+              >
+                ✕
+              </span>
+            </span>
+          ))}
+        </div>
         <input
           ref={fileRef}
           type="file"
           accept="image/*"
           multiple
           className="hidden"
-          onChange={(e) => setFiles(Array.from(e.target.files || []))}
+          onChange={(e) => {
+            const fs = Array.from(e.target.files || []);
+            if (!fs.length) return;
+            setFiles((prev) => [...prev, ...fs]);
+            e.target.value = "";
+          }}
         />
 
         {addUrl && (

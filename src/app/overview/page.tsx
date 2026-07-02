@@ -132,8 +132,9 @@ export default function OverviewPage() {
             {renderSection("scope", "Broad outline of what we want to build")}
           </div>
 
-          {/* Tabs: Must-haves / Love / Hate */}
-          <div className="mb-8">
+          {/* Tabs: Must-haves / Love / Hate (tighter bottom gap for guests, who
+              don't see the milestones/decisions that normally sit below) */}
+          <div className={isGuest ? "mb-0" : "mb-8"}>
             <div className="flex gap-1 border-b border-[#E5E1D3] mb-4">
               {TABS.map((tab) => (
                 <button
