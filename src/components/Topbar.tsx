@@ -24,19 +24,19 @@ export default function Topbar({
   const { isGuest, signOut } = useAuth();
   return (
     <div className="topbar sticky top-0 z-40 bg-[#5c7a5e1f] border-b border-[#5c7a5e52]">
-      {/* Always-present left slot so justify-between keeps controls on the right;
-          the hamburger inside is only visible on mobile. */}
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        {onMenuClick && (
-          <button className="mobile-menu-btn" onClick={onMenuClick} aria-label="Menu">
-            ☰
-          </button>
-        )}
-        <TopbarSearch />
-      </div>
-      <div className="flex items-center gap-[14px]">
+      {/* Single flex row. Desktop: search sits left, the icon group is pushed
+          right by .tb-bell's auto margin. Mobile: only the hamburger stays left;
+          search collapses to an icon and joins the right group (see globals.css). */}
+      {onMenuClick && (
+        <button className="mobile-menu-btn" onClick={onMenuClick} aria-label="Menu">
+          ☰
+        </button>
+      )}
+      <TopbarSearch />
+      <span className="tb-bell inline-flex items-center">
         <NotificationBell />
-        {onEditModeChange && (
+      </span>
+      {onEditModeChange && (
           <button
             onClick={() => onEditModeChange(!editMode)}
             title={editMode ? "Edit mode on" : "Edit mode off"}
@@ -60,7 +60,7 @@ export default function Topbar({
             <div className="w-7 h-7 rounded-full bg-bottle text-white text-[11px] font-semibold flex items-center justify-center overflow-hidden">
               {user.short_name?.charAt(0).toUpperCase()}
             </div>
-            <span className="text-sage text-[12px]">{user.short_name}</span>
+            <span className="text-sage text-[12px] hidden sm:inline">{user.short_name}</span>
             <button
               onClick={signOut}
               className="text-bottle underline text-[12px] ml-1"
@@ -86,10 +86,9 @@ export default function Topbar({
                 user.short_name?.charAt(0).toUpperCase()
               )}
             </div>
-            <span className="text-sage text-[12px]">{user.short_name}</span>
+            <span className="text-sage text-[12px] hidden sm:inline">{user.short_name}</span>
           </Link>
         )}
-      </div>
     </div>
   );
 }

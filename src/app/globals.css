@@ -146,13 +146,17 @@ a {
 
 .topbar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 14px;
   padding: 10px 52px;
 }
+/* Desktop: search stays left; the bell + everything after it is pushed right. */
+.tb-bell { margin-left: auto; }
 
 /* Top-bar global search */
 .topbar-search { position: relative; max-width: 320px; width: 100%; }
+.ts-toggle { display: none; }
+.ts-cancel { display: none; }
 .ts-field {
   display: flex; align-items: center; gap: 8px;
   background: rgb(255 255 255 / 78%); border: 1px solid #b7c4b6;
@@ -1054,9 +1058,31 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   }
 
   .topbar { padding: 12px 16px 10px; }
-  .topbar-search { max-width: 200px; }
-  .ts-panel { width: 88vw; }
   main { padding: 14px 16px 50px; overflow-x: hidden; }
+
+  /* Mobile: hamburger stays far left; search + icon group sit far right. */
+  .tb-bell { margin-left: 0; }
+  .topbar-search { flex: none; width: auto; max-width: none; margin-left: auto; }
+  .ts-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; color: var(--sage); cursor: pointer;
+    padding: 4px; margin-left: 2px;
+  }
+  .topbar-search .ts-field { display: none; }
+  .topbar-search.expanded {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 70;
+    background: #F4F1E8; padding: 10px 14px; border-bottom: 1px solid #E2DDCC;
+  }
+  .topbar-search.expanded .ts-toggle { display: none; }
+  .topbar-search.expanded .ts-field { display: flex; }
+  .topbar-search.expanded .ts-kbd { display: none; }
+  .ts-cancel { color: var(--sage); font-size: 13px; background: none; border: none;
+    cursor: pointer; padding: 0 2px 0 8px; flex: none; }
+  .topbar-search.expanded .ts-cancel { display: inline; }
+  .topbar-search.expanded .ts-panel {
+    position: absolute; top: 100%; left: 0; right: 0; width: auto; max-width: none;
+    border-radius: 0 0 10px 10px;
+  }
   .title-block h1 { font-size: 26px; }
   .masonry { column-count: 2; }
 

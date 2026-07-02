@@ -1,4 +1,22 @@
-# Klein Welgeluk — Build Diary App
+# 🏗️ Klein Welgeluk — Build Diary App
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/REPLACE-WITH-SITE-ID/deploy-status)](https://app.netlify.com/projects/klein-welgeluk/deploys)
+&nbsp;
+![Site](https://img.shields.io/website?url=https%3A%2F%2Fkleinwelgeluk.co.za&label=kleinwelgeluk.co.za&up_message=live&up_color=2F4030&down_message=down)
+&nbsp;
+![Next.js](https://img.shields.io/badge/Next.js-14-000?logo=nextdotjs&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%C2%B7%20Storage%20%C2%B7%20Auth-3ECF8E?logo=supabase&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+
+<!--
+  Deploy badge: replace REPLACE-WITH-SITE-ID above with your Netlify badge ID.
+  Grab the ready-made markdown from Netlify → Site configuration → General →
+  "Status badges" (it embeds the ID for you). The badge turns green/red with
+  each production deploy, so this README shows live deploy health on GitHub.
+  Note: the "Site" badge (shields.io) pings kleinwelgeluk.co.za for up/down.
+  Supabase has no per-project status badge; platform health lives at
+  https://status.supabase.com.
+-->
 
 A collaborative web app for planning and tracking the Klein Welgeluk house build
 (Greyton). Owners, architect, and contractors share a brief, per-area pages,
@@ -6,7 +24,7 @@ documents, photos, costing, milestones, decisions, a snag list, a calendar, an
 activity feed, and in-app notifications. Friends/family can follow along in a
 read-mostly **guest** mode.
 
-## Tech Stack
+## 🧰 Tech Stack
 
 - **Framework:** Next.js 14 (App Router) + React 18 + TypeScript
 - **Styling:** Tailwind CSS plus a custom stylesheet (`src/app/globals.css`)
@@ -21,7 +39,7 @@ read-mostly **guest** mode.
 > The HTML files in the repo root (`mockup_*.html`, `index.html`) are **static
 > design references only**. The running app is the source of truth.
 
-## Local Development
+## 💻 Local Development
 
 ```bash
 npm install
@@ -39,7 +57,7 @@ npm start          # serve the production build
 Local and production share one Supabase project, so migrations run once apply to
 both. Verify with `npm run build` before deploying.
 
-## Supabase Setup
+## 🗄️ Supabase Setup
 
 1. Base schema: [`SUPABASE_SETUP_EXACT.md`](SUPABASE_SETUP_EXACT.md).
 2. Two **public** Storage buckets: `documents` and `photos` (carousel + snag
@@ -95,7 +113,7 @@ CREATE TABLE IF NOT EXISTS snags (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
 ```
 
-## Authentication & Roles
+## 🔐 Authentication & Roles
 
 - **Supabase Auth**, invite-only. `AppFrame` forces login: unauthenticated
   visitors are redirected to `/login`.
@@ -112,7 +130,7 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
   milestones, decision log, or snag list. Guests get a **Sign out** control in
   the top bar (no profile page). The `users` list API excludes the guest user.
 
-## Features
+## ✨ Features
 
 ### Top bar
 - **Global search** — a rounded search field (left side) that queries **pages
@@ -122,8 +140,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
   (comments deep-link to `#comments`; milestones/decisions fall back to
   `/overview`). Keyboard: `/` or `Cmd/Ctrl+K` focuses it, ↑/↓ move, ↵ opens,
   `Esc` closes. Documents, milestones, decisions, and snags are omitted for
-  guests (matching where they're hidden in the UI). On mobile the field shrinks
-  (panel spans the width).
+  guests (matching where they're hidden in the UI). On mobile it collapses to a
+  search icon that expands into a full-width bar (with Cancel) so it doesn't
+  crowd the bell/edit/profile controls.
 - **Edit mode** — a pill that reads **"Edit"** (outlined) when off and
   **"Editing"** (solid green) when on; owners/collaborators toggle it to reveal
   editing controls. Content is read-only when off; comments/uploads stay open.
@@ -219,7 +238,7 @@ toggles are persisted to `users.notif_prefs` and respected when sending;
   the app shell so the **footer sticks to the bottom** of short pages (100vh
   overshot past mobile browser chrome).
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 src/
@@ -244,7 +263,7 @@ src/
 └── lib/                      # supabase client, upload, img transforms, notify, tagColor
 ```
 
-## API Routes
+## 🔌 API Routes
 
 | Route | Methods | Purpose |
 |-------|---------|---------|
@@ -268,7 +287,7 @@ src/
 | `/api/users`, `/api/users/[id]`, `/api/users/resolve` | GET/POST, PATCH/DELETE, POST | Team; PATCH accepts `notif_prefs`; resolve maps auth → user (invite-only) |
 | `/api/guest-passcode`, `/api/auth/guest-verify` | POST | Set / verify guest passcode |
 
-## Data Model
+## 🧬 Data Model
 
 `pages`, `tags`, `page_tags`, `assignments`, `documents` (+`category`), `photos`,
 `carousel_photos`, `costing`, `comments` (+`photo_id`; `page_id` nullable),
@@ -278,13 +297,13 @@ src/
 No FK constraints on the newer tables, so the API joins author/page/fixer names
 manually. Snag photos are real `photos` rows referenced by `snags.photo_id`.
 
-## Deployment
+## 🚀 Deployment
 
 GitHub → Netlify (`@netlify/plugin-nextjs`). Build `npm run build`; set the three
 Supabase env vars in Netlify. Verify locally with `npm run build` first; run any
 pending migrations (above) since local and prod share one Supabase project.
 
-## Backlog / Not Yet Built
+## 🧭 Backlog / Not Yet Built
 
 - **Weekly digest** on the home page (design parked).
 - **"On this day"** photo memories (3/6/12-month lookback) — designed, dormant
@@ -293,6 +312,6 @@ pending migrations (above) since local and prod share one Supabase project.
   Instagram **Business** account + Meta app/token; publish restricted to Deven +
   Wernardt via a per-user `users.can_instagram` flag).
 
-## License
+## 📄 License
 
 Private project for Klein Welgeluk.

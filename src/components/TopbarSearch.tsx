@@ -69,6 +69,7 @@ export default function TopbarSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Result[]>([]);
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false); // mobile: icon → full-width bar
   const [loading, setLoading] = useState(false);
   const [active, setActive] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -98,14 +99,19 @@ export default function TopbarSearch() {
     return () => clearTimeout(t);
   }, [query, isGuest]);
 
+  const collapse = useCallback(() => {
+    setOpen(false);
+    setExpanded(false);
+  }, []);
+
   // Close on outside click.
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) collapse();
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [collapse]);
 
   // Global "/" and Cmd/Ctrl+K to focus search.
   useEffect(() => {
@@ -124,17 +130,23 @@ export default function TopbarSearch() {
 
   const go = useCallback(
     (r: Result) => {
-      setOpen(false);
       setQuery("");
       setResults([]);
+      collapse();
       router.push(r.href);
     },
-    [router]
+    [router, collapse]
   );
+
+  const openMobile = () => {
+    setExpanded(true);
+    setOpen(true);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      setOpen(false);
+      collapse();
       inputRef.current?.blur();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -153,7 +165,13 @@ export default function TopbarSearch() {
   let flatIndex = -1;
 
   return (
-    <div className="topbar-search" ref={boxRef}>
+    <div className={`topbar-search ${expanded ? "expanded" : ""}`} ref={boxRef}>
+      <button className="ts-toggle" aria-label="Search" onClick={openMobile}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m21 21-4.3-4.3" />
+        </svg>
+      </button>
       <div className="ts-field">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="7" />
@@ -176,6 +194,9 @@ export default function TopbarSearch() {
         ) : (
           <span className="ts-kbd" aria-hidden="true">/</span>
         )}
+        <button className="ts-cancel" onClick={collapse} aria-label="Close search">
+          Cancel
+        </button>
       </div>
 
       {showPanel && (
