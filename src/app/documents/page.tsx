@@ -163,7 +163,7 @@ export default function DocumentsPage() {
                   </span>
                 </div>
                 <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {doc.page?.title && <span className="tag-chip">{doc.page.title}</span>}
+                  {doc.page?.title && <span className="tag-chip brass">{doc.page.title}</span>}
                   {doc.category && <span className="tag-chip">{doc.category}</span>}
                   {canWrite && (
                     <span className="del-badge" onClick={() => deleteDocument(doc.id)}>

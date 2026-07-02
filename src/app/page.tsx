@@ -65,6 +65,7 @@ const ACTIVITY_STYLE: Record<string, { bg: string; fg: string }> = {
   document: { bg: "#DCE6EE", fg: "#2F4A63" },
   event: { bg: "#E7E0EE", fg: "#4E3A63" },
   page: { bg: "#D8E9E6", fg: "#2E5852" },
+  assigned: { bg: "#F0DBD5", fg: "#7A3B2E" },
 };
 
 function ActivityChip({ type }: { type: string }) {
@@ -110,6 +111,15 @@ function ActivityChip({ type }: { type: string }) {
         <svg {...p}>
           <rect x="3.5" y="4.5" width="13" height="12" rx="1.5" />
           <path d="M3.5 8.2h13M7 3v3M13 3v3" />
+        </svg>
+      );
+      break;
+    case "assigned":
+      icon = (
+        <svg {...p}>
+          <circle cx="8" cy="7" r="2.6" />
+          <path d="M3.5 16c0-2.8 2-4.2 4.5-4.2s4.5 1.4 4.5 4.2" />
+          <path d="M14.5 7.5v4M16.5 9.5h-4" />
         </svg>
       );
       break;
@@ -512,7 +522,7 @@ export default function HomePage() {
                         )}
                         <span className="when">{timeAgo(a.when)}</span>
                       </span>
-                      {isOwner && editMode && a.type !== "page" && (
+                      {isOwner && editMode && a.type !== "page" && a.type !== "assigned" && (
                         <span className="del-badge" onClick={() => deleteActivity(a)}>
                           ✕
                         </span>

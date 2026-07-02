@@ -115,6 +115,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
 ## Features
 
 ### Top bar
+- **Global search** — a rounded search field (left side) that queries **pages
+  (incl. brief/description), milestones, decisions, snags, photos, documents, and
+  comments** at once. Typing (debounced) drops an inline results panel grouped by
+  type, with the matched text highlighted; each result links to its source
+  (comments deep-link to `#comments`; milestones/decisions fall back to
+  `/overview`). Keyboard: `/` or `Cmd/Ctrl+K` focuses it, ↑/↓ move, ↵ opens,
+  `Esc` closes. Documents, milestones, decisions, and snags are omitted for
+  guests (matching where they're hidden in the UI). On mobile the field shrinks
+  (panel spans the width).
 - **Edit mode** — a pill that reads **"Edit"** (outlined) when off and
   **"Editing"** (solid green) when on; owners/collaborators toggle it to reveal
   editing controls. Content is read-only when off; comments/uploads stay open.
@@ -134,9 +143,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS notif_prefs jsonb;
   (click opens the event popup). Hidden when none.
 - **Assigned to me** — cards with current stage + colored tags (hidden for guests).
 - **Recent activity** — colored icon-chip feed (comment / photo / document /
-  event / page); event rows open a popup; clicking a linked target navigates.
-  Owners can delete an activity item **in edit mode** (photo comments are
-  excluded from the feed).
+  event / page / **assigned** — someone assigned to a page); event rows open a
+  popup; clicking a linked target navigates. Owners can delete an activity item
+  **in edit mode** (photo comments, page-created, and assignment rows are not
+  deletable from the feed).
 
 ### Overview (`/overview`)
 Project brief: **Project scope** plus **Must-haves / Love / Hate** tabs (rich
@@ -148,7 +158,9 @@ shared documents / photos / comments block.
 - **Stages pipeline** — set the current stage; earlier stages mark completed.
 - **Assignees** and **Tags** (tags render in deterministic per-name colors).
 - **Brief** (rich text).
-- **Sub-pages** — child cards showing current status + colored tags.
+- **Sub-pages** — child cards showing current status + colored tags. The section
+  renders **skeleton placeholders** until each child's current stage and tags have
+  loaded, so cards never flash a wrong/default status first.
 - **Documents / Photo gallery / Comments** (shared block, see below).
 - **Decision log** for this page (hidden from guests; edit-mode delete).
 - **Costing** — collapsible (fold style, white); hidden from guests, and hidden
@@ -165,6 +177,9 @@ shared documents / photos / comments block.
   (caption, author, 💬 comment + reaction counts). "+ Add photos" uses the same
   pill picker (multi-file or add-by-URL). Category filter pills appear when there
   are photos.
+- Documents and photos both show **loading skeletons** on first load (shimmer doc
+  row / masonry pins) instead of briefly flashing "No documents / No photos yet."
+  or empty caption bars — smoother, less jumpy.
 - Clicking a photo opens the **Instagram-style photo view** (`PhotoModal`):
   large image + panel with caption (owner-editable), **reactions**, and a
   **comment thread** with **@mention autocomplete** (notifies the person).
@@ -179,7 +194,8 @@ live. Reactions are for signed-in users (guests share one identity).
 
 ### Documents (`/documents`)
 Lists **every** document across all pages, each tagged with (and linked to) its
-source page. Filter by category (Building / Services / Exterior / Quotes).
+source page. The **source-page tag is brass-tinted** to distinguish it from the
+grey category tag. Filter by category (Building / Services / Exterior / Quotes).
 Hidden from guests.
 
 ### Calendar (`/calendar`)
@@ -199,7 +215,9 @@ toggles are persisted to `users.notif_prefs` and respected when sending;
 - **Rich-text editor** — bold/italic/strikethrough/lists + @mention autocomplete.
 - **Toasts** for success/error (no browser dialogs).
 - **Mobile-responsive** (phones): off-canvas sidebar drawer, viewport-safe
-  modals/menus, stacked profile fields, single-column grids.
+  modals/menus, stacked profile fields, single-column grids. Uses `100dvh` for
+  the app shell so the **footer sticks to the bottom** of short pages (100vh
+  overshot past mobile browser chrome).
 
 ## Project Structure
 
@@ -245,7 +263,8 @@ src/
 | `/api/milestones` | GET, POST, DELETE | Overview milestones |
 | `/api/decisions` | GET (page or roll-up), POST, DELETE | Decision log |
 | `/api/snags` | GET, POST, PATCH, DELETE | Snag list |
-| `/api/activity` | GET | Aggregated recent-activity feed |
+| `/api/activity` | GET | Aggregated recent-activity feed (comments, photos, documents, events, pages, page assignments) |
+| `/api/search` | GET (`?q=`, `&guest=1`) | Global search across pages, milestones, decisions, snags, photos, documents, comments |
 | `/api/users`, `/api/users/[id]`, `/api/users/resolve` | GET/POST, PATCH/DELETE, POST | Team; PATCH accepts `notif_prefs`; resolve maps auth → user (invite-only) |
 | `/api/guest-passcode`, `/api/auth/guest-verify` | POST | Set / verify guest passcode |
 
@@ -270,8 +289,9 @@ pending migrations (above) since local and prod share one Supabase project.
 - **Weekly digest** on the home page (design parked).
 - **"On this day"** photo memories (3/6/12-month lookback) — designed, dormant
   until there are old-enough photos.
-- **Global search** across pages/comments/docs/photos.
-- **Instagram cross-post** of a photo to the @kleinwelgeluk account.
+- **Instagram cross-post** of a photo to the @kleinwelgeluk account (needs an
+  Instagram **Business** account + Meta app/token; publish restricted to Deven +
+  Wernardt via a per-user `users.can_instagram` flag).
 
 ## License
 

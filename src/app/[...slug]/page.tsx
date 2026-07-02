@@ -72,6 +72,7 @@ export default function DynamicPage() {
   const [stageName, setStageName] = useState("");
   const [childCurrents, setChildCurrents] = useState<Record<string, string>>({});
   const [childTags, setChildTags] = useState<Record<string, any[]>>({});
+  const [childDataLoaded, setChildDataLoaded] = useState(false);
 
   useEffect(() => {
     setBrief(page?.brief || "");
@@ -80,6 +81,7 @@ export default function DynamicPage() {
   useEffect(() => {
     if (!pageId) return;
     let active = true;
+    setChildDataLoaded(false);
     (async () => {
       try {
         const [cost, a, t, u, s] = await Promise.all([
@@ -107,6 +109,7 @@ export default function DynamicPage() {
           );
           if (active) setChildTags(Object.fromEntries(tagEntries));
         }
+        if (active) setChildDataLoaded(true);
         if (cost.costing) {
           setCosting({
             budgeted_amount: cost.costing.budgeted_amount || "",
@@ -478,29 +481,43 @@ export default function DynamicPage() {
                 <>
                   <h2 className="section-h">Sub-pages</h2>
                   <div className="sub-list">
-                    {children.map((child) => (
-                      <a key={child.id} href={`/${child.slug}`} className="sub-card-lg">
-                        <div className="name">{child.title}</div>
-                        <div className="status">
-                          Current status: {childCurrents[child.id] || "Not started"}
-                        </div>
-                        {(childTags[child.id]?.length ?? 0) > 0 && (
-                          <div className="card-tags">
-                            {childTags[child.id].map((t: any) => (
-                              <span className="card-tag" key={t.id} style={tagColor(t.name)}>
-                                {t.name}
-                              </span>
-                            ))}
+                    {!childDataLoaded
+                      ? children.map((child) => (
+                          <div key={child.id} className="sub-card-lg skel-sub" aria-hidden="true">
+                            <div className="skeleton" style={{ height: 15, width: "55%" }} />
+                            <div
+                              className="skeleton"
+                              style={{ height: 11, width: "40%", marginTop: 10 }}
+                            />
+                            <div
+                              className="skeleton"
+                              style={{ height: 18, width: 70, marginTop: 12, borderRadius: 999 }}
+                            />
                           </div>
-                        )}
-                        {child.brief && (
-                          <div
-                            className="brief rich-text"
-                            dangerouslySetInnerHTML={{ __html: child.brief }}
-                          />
-                        )}
-                      </a>
-                    ))}
+                        ))
+                      : children.map((child) => (
+                          <a key={child.id} href={`/${child.slug}`} className="sub-card-lg">
+                            <div className="name">{child.title}</div>
+                            <div className="status">
+                              Current status: {childCurrents[child.id] || "Not started"}
+                            </div>
+                            {(childTags[child.id]?.length ?? 0) > 0 && (
+                              <div className="card-tags">
+                                {childTags[child.id].map((t: any) => (
+                                  <span className="card-tag" key={t.id} style={tagColor(t.name)}>
+                                    {t.name}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {child.brief && (
+                              <div
+                                className="brief rich-text"
+                                dangerouslySetInnerHTML={{ __html: child.brief }}
+                              />
+                            )}
+                          </a>
+                        ))}
                   </div>
                 </>
               )}

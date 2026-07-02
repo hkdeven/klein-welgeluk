@@ -151,6 +151,42 @@ a {
   padding: 10px 52px;
 }
 
+/* Top-bar global search */
+.topbar-search { position: relative; max-width: 320px; width: 100%; }
+.ts-field {
+  display: flex; align-items: center; gap: 8px;
+  background: rgb(255 255 255 / 78%); border: 1px solid #b7c4b6;
+  border-radius: 999px; padding: 6px 12px; color: var(--sage);
+}
+.ts-field:focus-within { border-color: var(--sage); box-shadow: 0 0 0 2px rgba(47,64,48,0.12); }
+.ts-input { flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  font-size: 13px; color: var(--bottle); }
+.ts-input::placeholder { color: var(--mist); }
+.ts-kbd { font-size: 11px; color: var(--mist); border: 1px solid #E5E1D3; border-radius: 4px;
+  padding: 0 5px; line-height: 16px; }
+.ts-clear { color: var(--mist); font-size: 16px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.ts-clear:hover { color: var(--sage); }
+.ts-panel {
+  position: absolute; top: calc(100% + 8px); left: 0; width: 360px; max-width: 90vw;
+  background: #fff; border: 1px solid #DAD5C3; border-radius: 10px;
+  box-shadow: 0 8px 26px rgba(40,36,26,0.16); overflow: hidden; z-index: 60;
+  max-height: 66vh; overflow-y: auto;
+}
+.ts-empty { padding: 16px; font-size: 13px; color: var(--mist); text-align: center; }
+.ts-group { padding: 9px 13px 3px; font-size: 10px; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--mist); }
+.ts-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 13px; background: transparent; border: none; cursor: pointer; }
+.ts-row.active { background: #F5F2E9; }
+.ts-ic { width: 26px; height: 26px; border-radius: 6px; flex: none; }
+.ts-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ts-title { font-size: 13px; color: #2C3A30; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-sub { font-size: 11px; color: var(--sage); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ts-tag { font-size: 10px; flex: none; opacity: 0.8; }
+.search-mark { background: #F3E4CC; color: #6E4E22; border-radius: 3px; padding: 0 2px; }
+.ts-foot { display: flex; align-items: center; gap: 14px; padding: 8px 13px;
+  border-top: 1px solid #EDE8D9; font-size: 10px; color: var(--mist); }
+
 main {
   padding: 18px 52px 70px;
 }
@@ -479,6 +515,19 @@ main {
   font-family: 'IBM Plex Mono', monospace;
   white-space: nowrap; flex: 0 0 auto;
 }
+/* Brass variant — used for the source-page tag on the Documents page. */
+.tag-chip.brass { background: var(--brass-bg); color: #6E4E22; border-color: #E3CDA6; }
+
+/* Loading skeletons */
+.skeleton {
+  background: linear-gradient(90deg, #EFEDE3 25%, #F6F4EC 37%, #EFEDE3 63%);
+  background-size: 400% 100%;
+  animation: skeleton 1.3s ease-in-out infinite;
+  border-radius: 4px;
+}
+@keyframes skeleton { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.skel-card { height: 92px; border: 1px solid #ECE8DC; border-radius: 4px; margin-bottom: 12px; }
+.skel-pin { break-inside: avoid; border-radius: 4px; margin: 0 0 14px; }
 /* ---- Photo reactions (in the photo detail panel) ---- */
 .photo-reactions {
   display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-start;
@@ -979,7 +1028,10 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
 .nav-backdrop { display: none; }
 
 @media (max-width: 640px) {
-  .shell { grid-template-columns: 1fr; max-width: 100%; box-shadow: none; }
+  /* Use dynamic viewport height so the sticky footer sits at the visible bottom
+     (100vh overshoots past the mobile browser chrome). */
+  .shell { grid-template-columns: 1fr; max-width: 100%; box-shadow: none; min-height: 100dvh; }
+  .shell > .flex-1 { min-height: 100dvh; }
 
   /* Sidebar becomes an off-canvas drawer */
   .ledger {
@@ -1002,6 +1054,8 @@ h2.section-h::after { content: ""; flex: 1; height: 1px; background: #E5E1D3; }
   }
 
   .topbar { padding: 12px 16px 10px; }
+  .topbar-search { max-width: 200px; }
+  .ts-panel { width: 88vw; }
   main { padding: 14px 16px 50px; overflow-x: hidden; }
   .title-block h1 { font-size: 26px; }
   .masonry { column-count: 2; }

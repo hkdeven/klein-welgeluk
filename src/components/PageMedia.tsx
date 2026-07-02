@@ -44,6 +44,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   const [reactionInfo, setReactionInfo] = useState<Record<string, { total: number; top: string }>>({});
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
   const [mentionUsers, setMentionUsers] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   const loadDocuments = async (id: string) => {
     const d = await fetch(`/api/documents?page_id=${id}`).then((r) => r.json());
@@ -53,6 +54,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
   useEffect(() => {
     if (!pageId) return;
     let active = true;
+    setLoaded(false);
     (async () => {
       try {
         const [c, p, d] = await Promise.all([
@@ -64,6 +66,7 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         setComments(c.comments || []);
         setPhotos(p.photos || []);
         setDocuments(d.documents || []);
+        setLoaded(true);
         // If we arrived via a notification link (#comments), scroll there once loaded.
         if (window.location.hash === "#comments") {
           setTimeout(
@@ -267,12 +270,15 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           </button>
         )}
       </div>
-      {documents.length === 0 && (
+      {!loaded ? (
+        <div className="skel-card" aria-hidden="true" style={{ marginTop: 12 }} />
+      ) : documents.length === 0 ? (
         <p className="desc-text" style={{ color: "var(--mist)" }}>
           No documents yet.
         </p>
-      )}
-      {documents.map((doc: any) => (
+      ) : null}
+      {loaded &&
+        documents.map((doc: any) => (
         <div className="doc-row" key={doc.id}>
           <div className="ic">{doc.file_type?.toUpperCase()?.slice(0, 3) || "DOC"}</div>
           <div className="meta">
@@ -333,7 +339,13 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         </div>
       )}
 
-      {visiblePhotos.length > 0 ? (
+      {!loaded ? (
+        <div className="masonry" aria-hidden="true">
+          {[220, 300, 180, 260, 200, 320].map((h, i) => (
+            <div key={i} className="pin skel-pin skeleton" style={{ height: h }} />
+          ))}
+        </div>
+      ) : visiblePhotos.length > 0 ? (
         <div className="masonry">
           {visiblePhotos.map((p: any) => {
             const who = p.uploader?.short_name;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import NotificationBell from "@/components/NotificationBell";
+import TopbarSearch from "@/components/TopbarSearch";
 import { useAuth } from "@/components/AuthProvider";
 
 interface TopbarProps {
@@ -25,12 +26,13 @@ export default function Topbar({
     <div className="topbar sticky top-0 z-40 bg-[#5c7a5e1f] border-b border-[#5c7a5e52]">
       {/* Always-present left slot so justify-between keeps controls on the right;
           the hamburger inside is only visible on mobile. */}
-      <div className="flex items-center">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
         {onMenuClick && (
           <button className="mobile-menu-btn" onClick={onMenuClick} aria-label="Menu">
             ☰
           </button>
         )}
+        <TopbarSearch />
       </div>
       <div className="flex items-center gap-[14px]">
         <NotificationBell />

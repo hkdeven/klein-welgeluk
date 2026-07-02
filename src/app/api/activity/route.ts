@@ -24,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
     }
 
-    const [comments, photos, documents, events, pages] = await Promise.all([
+    const [comments, photos, documents, events, pages, assignmentsRes] = await Promise.all([
       supabase
         .from("comments")
         .select("id, created_at, author:author_id(short_name), page:page_id(title, slug)")
@@ -49,6 +49,11 @@ export async function GET() {
       supabase
         .from("pages")
         .select("id, title, slug, created_at")
+        .order("created_at", { ascending: false })
+        .limit(10),
+      supabase
+        .from("assignments")
+        .select("id, created_at, user:user_id(short_name), page:page_id(title, slug)")
         .order("created_at", { ascending: false })
         .limit(10),
     ]);
@@ -113,6 +118,18 @@ export async function GET() {
         action: "New page created:",
         target: pg.title,
         slug: pg.slug,
+      })
+    );
+    (assignmentsRes.data || []).forEach((a: any) =>
+      items.push({
+        id: `a_${a.id}`,
+        type: "assigned",
+        refId: a.id,
+        when: a.created_at,
+        who: one(a.user).short_name || null,
+        action: "was assigned to",
+        target: one(a.page).title || "a page",
+        slug: one(a.page).slug || null,
       })
     );
 
