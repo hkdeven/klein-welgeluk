@@ -37,12 +37,27 @@ export default function DocumentsPage() {
   };
 
   useEffect(() => {
-    // Upload target: the dedicated "documents" page if present, else the first page.
-    if (pages.length) {
-      const docsPage = pages.find((p: any) => p.slug === "documents") || pages[0];
-      setPageId(docsPage?.id || null);
-    }
-    loadDocuments().catch(() => {});
+    // Upload target: find-or-create a dedicated "documents" page (same pattern
+    // as /photos). Falling back to pages[0] mis-attributed uploads to Building.
+    (async () => {
+      if (pages.length) {
+        let docsPage = pages.find((p: any) => p.slug === "documents");
+        if (!docsPage) {
+          try {
+            const res = await fetch("/api/pages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: "Documents", slug: "documents" }),
+            });
+            if (res.ok) docsPage = await res.json();
+          } catch {
+            /* ignore */
+          }
+        }
+        setPageId(docsPage?.id || null);
+      }
+      loadDocuments().catch(() => {});
+    })();
   }, [pages]);
 
   const submitDoc = async (
@@ -172,7 +187,7 @@ export default function DocumentsPage() {
                   </b>
                   <span>
                     Uploaded by {doc.uploader?.short_name || "-"} · {shortDate(doc.created_at)}
-                    {doc.page?.title && (
+                    {doc.page?.title && doc.page.slug !== "documents" && (
                       <>
                         {" · in "}
                         <a href={`/${doc.page.slug}`} className="underline hover:text-bottle">
@@ -184,7 +199,9 @@ export default function DocumentsPage() {
                   </span>
                 </div>
                 <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  {doc.page?.title && <span className="tag-chip brass">{doc.page.title}</span>}
+                  {doc.page?.title && doc.page.slug !== "documents" && (
+                    <span className="tag-chip brass">{doc.page.title}</span>
+                  )}
                   {doc.category && <span className="tag-chip">{doc.category}</span>}
                   {canWrite && (
                     <span className="del-badge" onClick={() => deleteDocument(doc.id)}>

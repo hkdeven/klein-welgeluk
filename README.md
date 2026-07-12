@@ -229,7 +229,11 @@ live. Reactions are for signed-in users (guests share one identity).
 Lists **every** document across all pages, each tagged with (and linked to) its
 source page. The **source-page tag is brass-tinted** to distinguish it from the
 grey category tag. Filter by category (Building / Services / Exterior / Quotes).
-Hidden from guests.
+Hidden from guests. Uploads from this page attach to a dedicated hidden
+"documents" holding page (find-or-created, same pattern as `/photos`), so they
+are no longer mis-attributed to the first page (Building); the self-referential
+source tag is suppressed for them. `POST /api/pages` is **find-or-create by
+slug**, so concurrent first-visits can't create duplicate holding pages.
 
 ### Calendar (`/calendar`)
 Events with optional time/description; Day / Week / Month / Year (2 months per

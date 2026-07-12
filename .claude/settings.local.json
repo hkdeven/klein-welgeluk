@@ -321,7 +321,10 @@
       "Bash(curl -s -X DELETE http://localhost:3000/api/documents/ee66fa84-a0c5-40ee-94cf-29060c9f20af -w \"\\\\nHTTP %{http_code}\\\\n\")",
       "Bash(curl -s -X POST http://localhost:3000/api/photos -H \"Content-Type: application/json\" -d '{\"page_id\":\"5bb343b4-01f5-4240-8350-0fc2bf90a2ac\",\"external_url\":\"picsum.photos/600/400\",\"caption\":\"claude-import-test\",\"category\":\"inspiration\",\"uploaded_by\":\"daa5f761-ca3b-4f82-a070-e9bf90f1dee2\"}')",
       "Bash(curl -s -X POST http://localhost:3000/api/photos -H \"Content-Type: application/json\" -d '{\"page_id\":\"5bb343b4-01f5-4240-8350-0fc2bf90a2ac\",\"external_url\":\"https://en.wikipedia.org/wiki/House\",\"caption\":\"claude-page-url-test\",\"category\":\"inspiration\",\"uploaded_by\":\"daa5f761-ca3b-4f82-a070-e9bf90f1dee2\"}' -w \"\\\\nHTTP %{http_code}\\\\n\")",
-      "Bash(curl -s -X PATCH http://localhost:3000/api/photos/a91d0b5d-ad8d-4803-ab8c-3ca46d0d699a -H \"Content-Type: application/json\" -d '{\"category\":\"inspiration\"}' -o /dev/null -w \"revert: %{http_code}\\\\n\")"
+      "Bash(curl -s -X PATCH http://localhost:3000/api/photos/a91d0b5d-ad8d-4803-ab8c-3ca46d0d699a -H \"Content-Type: application/json\" -d '{\"category\":\"inspiration\"}' -o /dev/null -w \"revert: %{http_code}\\\\n\")",
+      "Bash(curl -s -o /dev/null -w \"prod /resources now: HTTP %{http_code}\\\\n\" https://kleinwelgeluk.co.za/resources)",
+      "Bash(curl -s https://kleinwelgeluk.co.za/login)",
+      "Bash(curl -s \"http://localhost:3000/api/documents?page_id=e6d503b6-3b77-498d-8071-9466f6b1c15c\")"
     ]
   }
 }

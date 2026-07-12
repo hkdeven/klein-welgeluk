@@ -54,6 +54,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Find-or-create by slug: concurrent first-visits (and React dev double
+    // effects) used to create duplicate "photos"/"documents" holding pages.
+    const { data: existing } = await supabase
+      .from("pages")
+      .select()
+      .eq("slug", slug)
+      .limit(1)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json(existing, { status: 200 });
+    }
+
     const { data: newPage, error } = await supabase
       .from("pages")
       .insert([
