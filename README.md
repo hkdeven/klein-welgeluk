@@ -126,6 +126,13 @@ CREATE TABLE IF NOT EXISTS app_settings (
 - Sign-in methods: **Google SSO**, **email/password**, or a shared **guest
   passcode**. Auth emails are mapped to a row in the `users` table via
   `/api/users/resolve` (unknown emails get 403: an owner must add them first).
+- **Password reset**: "Forgot password?" under the email sign-in form sends a
+  Supabase recovery email; the link lands on `/reset-password` (a bare route)
+  where the user sets a new password. A `PASSWORD_RECOVERY` listener in
+  `AuthProvider` routes the recovery session there even if the email link lands
+  on the site root (the Supabase redirect allowlist controls the landing URL,
+  so add `https://kleinwelgeluk.co.za/reset-password` to it for a direct
+  landing).
   The Google avatar is backfilled only when the row has no avatar (a user's own
   uploaded avatar is never overwritten).
 - Roles: `owner` (full editor), `collaborator` (can write/comment/upload), and

@@ -9,7 +9,8 @@ import { useToast } from "@/components/Toast";
 export default function LoginPage() {
   const router = useRouter();
   const toast = useToast();
-  const { signedIn, signInWithGoogle, signInWithEmail, enterGuest, authError } = useAuth();
+  const { signedIn, signInWithGoogle, signInWithEmail, resetPassword, enterGuest, authError } =
+    useAuth();
   const [isGuest, setIsGuest] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
   const [email, setEmail] = useState("");
@@ -30,6 +31,18 @@ export default function LoginPage() {
     setBusy(false);
     if (error) toast.error(error);
     else router.push("/");
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast.error("Type your email address above first");
+      return;
+    }
+    setBusy(true);
+    const { error } = await resetPassword(email);
+    setBusy(false);
+    if (error) toast.error(error);
+    else toast.success("Password reset email sent. Check your inbox.");
   };
 
   const handleGuest = async (e: React.FormEvent) => {
@@ -102,6 +115,16 @@ export default function LoginPage() {
               <button className="primary-btn" type="submit" disabled={busy}>
                 {busy ? "Signing in…" : "Sign in"}
               </button>
+              <div className="text-center mt-2 mb-1">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={busy}
+                  className="text-[12px] text-sage underline cursor-pointer hover:text-bottle"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </form>
           )}
 
@@ -127,7 +150,7 @@ export default function LoginPage() {
 
           <p className="text-[13px] text-sage text-center leading-[1.5] mb-[18px]">
             Enter the passcode shared by Deven or Wernardt. You can browse the
-            whole project and add photos or documents — but you can&apos;t delete,
+            whole project and add photos or documents, but you can&apos;t delete,
             comment, or edit.
           </p>
 

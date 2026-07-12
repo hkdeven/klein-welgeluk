@@ -10,7 +10,7 @@ import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
 
 // Routes that render standalone, without the app shell.
-const BARE_ROUTES = ["/login"];
+const BARE_ROUTES = ["/login", "/reset-password"];
 
 export default function AppFrame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";

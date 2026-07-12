@@ -47,6 +47,7 @@ interface AuthValue {
   signInWithGoogle: () => void;
   signInWithMicrosoft: () => void;
   signInWithEmail: (email: string, password: string) => Promise<{ error?: string }>;
+  resetPassword: (email: string) => Promise<{ error?: string }>;
   enterGuest: () => void;
   signOut: () => void;
   updateUser: (patch: Partial<AppUser>) => void;
@@ -63,6 +64,7 @@ const AuthContext = createContext<AuthValue>({
   signInWithGoogle: () => {},
   signInWithMicrosoft: () => {},
   signInWithEmail: async () => ({}),
+  resetPassword: async () => ({}),
   enterGuest: () => {},
   signOut: () => {},
   updateUser: () => {},
@@ -96,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setSignedIn(true);
           setAuthError(null);
         } else if (res.status === 403) {
-          // Invite-only: email not on the team — reject and sign out.
+          // Invite-only: email not on the team, reject and sign out.
           const d = await res.json().catch(() => ({}));
           setAuthError(d.error || "This account isn't on the team yet.");
           setAppUser(null);
@@ -121,7 +123,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     supabaseClient.auth.getSession().then(({ data }) => {
       if (active) handleSession(data.session);
     });
-    const { data: sub } = supabaseClient.auth.onAuthStateChange((_e, session) => {
+    const { data: sub } = supabaseClient.auth.onAuthStateChange((event, session) => {
+      // Arriving from a password-reset email: take the user to the form that
+      // sets the new password (the email may land on any allowed URL).
+      if (
+        event === "PASSWORD_RECOVERY" &&
+        typeof window !== "undefined" &&
+        window.location.pathname !== "/reset-password"
+      ) {
+        window.location.replace("/reset-password");
+        return;
+      }
       handleSession(session);
     });
     return () => {
@@ -147,6 +159,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithEmail = async (email: string, password: string) => {
     setAuthError(null);
     const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    return { error: error?.message };
+  };
+  const resetPassword = async (email: string) => {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo:
+        typeof window !== "undefined"
+          ? `${window.location.origin}/reset-password`
+          : undefined,
+    });
     return { error: error?.message };
   };
   const enterGuest = () => {
@@ -182,6 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithGoogle,
         signInWithMicrosoft,
         signInWithEmail,
+        resetPassword,
         enterGuest,
         signOut,
         updateUser,
