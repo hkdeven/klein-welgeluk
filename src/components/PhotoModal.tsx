@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
-import { labelFor } from "@/components/PhotoUploadModal";
+import { labelFor, PHOTO_CATEGORIES } from "@/components/PhotoUploadModal";
 import PhotoReactions from "@/components/PhotoReactions";
 
 interface ModalPhoto {
@@ -17,8 +17,10 @@ interface PhotoModalProps {
   photo: ModalPhoto;
   url: string;
   canEdit?: boolean;
+  categories?: string[];
   onClose: () => void;
   onCaptionSaved?: (id: string, caption: string) => void;
+  onCategorySaved?: (id: string, category: string) => void;
   onReactionChange?: () => void;
 }
 
@@ -63,8 +65,10 @@ export default function PhotoModal({
   photo,
   url,
   canEdit,
+  categories = PHOTO_CATEGORIES,
   onClose,
   onCaptionSaved,
+  onCategorySaved,
   onReactionChange,
 }: PhotoModalProps) {
   const user = useCurrentUser();
@@ -74,6 +78,10 @@ export default function PhotoModal({
   const [caption, setCaption] = useState(photo.caption || "");
   const [editingCaption, setEditingCaption] = useState(false);
   const [captionDraft, setCaptionDraft] = useState(photo.caption || "");
+  const [category, setCategory] = useState(photo.category || "");
+  const [editingCat, setEditingCat] = useState(false);
+  const [newTagMode, setNewTagMode] = useState(false);
+  const [customCat, setCustomCat] = useState("");
   const [mentionUsers, setMentionUsers] = useState<any[]>([]);
   const [mention, setMention] = useState<{ items: any[]; index: number; start: number } | null>(
     null
@@ -174,6 +182,29 @@ export default function PhotoModal({
     }
   };
 
+  const closeCatEditor = () => {
+    setEditingCat(false);
+    setNewTagMode(false);
+    setCustomCat("");
+  };
+
+  const saveCategory = async (value: string) => {
+    const cat = value.trim();
+    closeCatEditor();
+    if (!cat || cat === category) return;
+    setCategory(cat);
+    onCategorySaved?.(photo.id, cat);
+    try {
+      await fetch(`/api/photos/${photo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: cat }),
+      });
+    } catch {
+      /* ignore */
+    }
+  };
+
   const saveCaption = async () => {
     setEditingCaption(false);
     setCaption(captionDraft);
@@ -203,10 +234,58 @@ export default function PhotoModal({
           <div className="pm-head">
             <Avatar name={photo.uploader?.short_name} url={photo.uploader?.avatar_url} />
             <div style={{ minWidth: 0 }}>
-              <div className="pm-name">{photo.uploader?.short_name || "—"}</div>
+              <div className="pm-name">{photo.uploader?.short_name || "-"}</div>
               <div className="pm-date">{shortDate(photo.created_at)}</div>
             </div>
-            {photo.category && <span className="pm-cat">{labelFor(photo.category)}</span>}
+            {editingCat && canEdit ? (
+              <span className="pm-cat-edit">
+                <select
+                  autoFocus={!newTagMode}
+                  value={newTagMode ? "__new__" : category}
+                  onChange={(e) => {
+                    if (e.target.value === "__new__") setNewTagMode(true);
+                    else saveCategory(e.target.value);
+                  }}
+                >
+                  {Array.from(new Set([...categories, ...(category ? [category] : [])])).map(
+                    (c) => (
+                      <option key={c} value={c}>
+                        {labelFor(c)}
+                      </option>
+                    )
+                  )}
+                  <option value="__new__">+ New tag…</option>
+                </select>
+                {newTagMode && (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={customCat}
+                    placeholder="New tag"
+                    onChange={(e) => setCustomCat(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveCategory(customCat);
+                      if (e.key === "Escape") closeCatEditor();
+                    }}
+                    onBlur={() => saveCategory(customCat)}
+                  />
+                )}
+                <button type="button" className="pm-cancel" onClick={closeCatEditor}>
+                  cancel
+                </button>
+              </span>
+            ) : canEdit ? (
+              <button
+                type="button"
+                className="pm-cat pm-cat-btn"
+                title="Change tag"
+                onClick={() => setEditingCat(true)}
+              >
+                {category ? labelFor(category) : "+ tag"} ▾
+              </button>
+            ) : (
+              category && <span className="pm-cat">{labelFor(category)}</span>
+            )}
           </div>
 
           <div className="pm-body" ref={bodyRef}>
@@ -235,7 +314,7 @@ export default function PhotoModal({
               </div>
             ) : caption ? (
               <div className="pm-caption">
-                <b>{photo.uploader?.short_name || "—"}</b> {caption}
+                <b>{photo.uploader?.short_name || "-"}</b> {caption}
                 {canEdit && (
                   <button className="pm-edit" onClick={() => setEditingCaption(true)}>
                     edit

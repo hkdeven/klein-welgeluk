@@ -1,4 +1,4 @@
-# 🏗️ Klein Welgeluk — Build Diary App
+# 🏗️ Klein Welgeluk: Build Diary App
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/3bef7a33-0cba-452d-8e09-5c7802e84a1e/deploy-status)](https://app.netlify.com/projects/astonishing-cranachan-f5b019/deploys)
 &nbsp;
@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
   visitors are redirected to `/login`.
 - Sign-in methods: **Google SSO**, **email/password**, or a shared **guest
   passcode**. Auth emails are mapped to a row in the `users` table via
-  `/api/users/resolve` (unknown emails get 403 — an owner must add them first).
+  `/api/users/resolve` (unknown emails get 403: an owner must add them first).
   The Google avatar is backfilled only when the row has no avatar (a user's own
   uploaded avatar is never overwritten).
 - Roles: `owner` (full editor), `collaborator` (can write/comment/upload), and
@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 ## ✨ Features
 
 ### Top bar
-- **Global search** — a rounded search field (left side) that queries **pages
+- **Global search**: a rounded search field (left side) that queries **pages
   (incl. brief/description), milestones, decisions, snags, photos, documents, and
   comments** at once. Typing (debounced) drops an inline results panel grouped by
   type, with the matched text highlighted; each result links to its source
@@ -149,11 +149,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
   guests (matching where they're hidden in the UI). On mobile it collapses to a
   search icon that expands into a full-width bar (with Cancel) so it doesn't
   crowd the bell/edit/profile controls.
-- **Edit mode** — a pill that reads **"Edit"** (outlined) when off and
+- **Edit mode**: a pill that reads **"Edit"** (outlined) when off and
   **"Editing"** (solid green) when on; owners/collaborators toggle it to reveal
   editing controls. Content is read-only when off; comments/uploads stay open.
-- **Notifications** — a bell with a brass unread-count badge (see below).
-- **Profile** — avatar linking to `/profile` (guests: plain label + sign out).
+- **Notifications**: a bell with a brass unread-count badge (see below).
+- **Profile**: avatar linking to `/profile` (guests: plain label + sign out).
 - Sage-tinted bar; on mobile a hamburger opens the sidebar drawer.
 
 ### Navigation (left sidebar)
@@ -165,11 +165,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
 
 ### Home (`/`)
 - Hero **photo carousel** (owners add/remove in edit mode; images transform-sized).
-- **Upcoming events** — calendar events you're tagged in within the next 7 days
+- **Upcoming events**: calendar events you're tagged in within the next 7 days
   (click opens the event popup). Hidden when none.
-- **Assigned to me** — cards with current stage + colored tags (hidden for guests).
-- **Recent activity** — colored icon-chip feed (comment / photo / document /
-  event / page / **assigned** — someone assigned to a page); event rows open a
+- **Assigned to me**: cards with current stage + colored tags (hidden for guests).
+- **Recent activity**: colored icon-chip feed (comment / photo / document /
+  event / page / **assigned**: someone assigned to a page); event rows open a
   popup; clicking a linked target navigates. Owners can delete an activity item
   **in edit mode** (photo comments, page-created, and assignment rows are not
   deletable from the feed).
@@ -181,37 +181,43 @@ text). Below (hidden from guests): a collapsible **Milestones** timeline and a
 shared documents / photos / comments block.
 
 ### Area & sub-pages (`/[...slug]`, e.g. `/building/bathroom`)
-- **Stages pipeline** — set the current stage; earlier stages mark completed.
+- **Stages pipeline**: set the current stage; earlier stages mark completed.
 - **Assignees** and **Tags** (tags render in deterministic per-name colors).
 - **Brief** (rich text).
-- **Sub-pages** — child cards showing current status + colored tags. The section
+- **Sub-pages**: child cards showing current status + colored tags. The section
   renders **skeleton placeholders** until each child's current stage and tags have
   loaded, so cards never flash a wrong/default status first.
 - **Documents / Photo gallery / Comments** (shared block, see below).
 - **Decision log** for this page (hidden from guests; edit-mode delete).
-- **Costing** — collapsible (fold style, white); hidden from guests, and hidden
+- **Costing**: collapsible (fold style, white); hidden from guests, and hidden
   when empty unless an owner is editing. Sits at the bottom.
-- **Snag list** — appears **only when the page's current stage is "Snagging"**.
+- **Snag list**: appears **only when the page's current stage is "Snagging"**.
   Checklist with fixed-by/date, an optional photo (a real photo row that opens in
   the full viewer with comments), edit-mode delete. Hidden from guests.
 
 ### Shared documents / photos / comments block
-- **Documents** — "+ Add document" opens a modal with a pill file-picker,
+- **Documents**: "+ Add document" opens a modal with a pill file-picker,
   **multiple-file** upload, and a **File name** rename. Rows show uploader/date;
   delete in edit context. The category dropdown includes **"+ New category…"** to
-  type a custom category at upload time (same for photos).
-- **Photo gallery** — masonry of transform-sized thumbnails with a footer strip
+  type a custom category at upload time (same for photos). Files upload
+  **straight from the browser to storage** (signed URL), so large files work -
+  the ceiling is Supabase's per-file limit (50MB default), not Vercel's 4.5MB
+  request cap.
+- **Photo gallery**: masonry of transform-sized thumbnails with a footer strip
   (caption, author, 💬 comment + reaction counts). "+ Add photos" uses the same
   pill picker (multi-file or add-by-URL). Category filter pills appear when there
-  are photos.
+  are photos. **Add-by-URL imports the image into storage server-side** (survives
+  hotlink protection and expiring CDN links; scheme auto-prepended); pasting a
+  page URL instead of a direct image returns a clear error.
 - Documents and photos both show **loading skeletons** on first load (shimmer doc
   row / masonry pins) instead of briefly flashing "No documents / No photos yet."
-  or empty caption bars — smoother, less jumpy.
+  or empty caption bars: smoother, less jumpy.
 - Clicking a photo opens the **Instagram-style photo view** (`PhotoModal`):
-  large image + panel with caption (owner-editable), **reactions**, and a
+  large image + panel with caption (owner-editable), an **owner-editable tag
+  pill** (click to switch category or add a "+ New tag…"), **reactions**, and a
   **comment thread** with **@mention autocomplete** (notifies the person).
   Mobile uses `100dvh` so the composer isn't hidden.
-- **Comments** (page + photo) — **@mention autocomplete** on both; picking a
+- **Comments** (page + photo): **@mention autocomplete** on both; picking a
   name notifies them (works on mobile).
 
 ### Reactions
@@ -232,15 +238,15 @@ Home "Upcoming events". Click an event for the popup (shows creator); the
 **author can edit** their event.
 
 ### Weekly Digest (`/weekly-digest`)
-A standalone **Sunday–Saturday** summary with prev/next week navigation. Top row:
+A standalone **Sunday-Saturday** summary with prev/next week navigation. Top row:
 **Progress** (stage changes only), **Decisions** (logged that week), and **Coming
-up** (events in the following 7 days) — each colour-delineated. Below, **Activity
+up** (events in the following 7 days): each colour-delineated. Below, **Activity
 by area**: one clickable card per sub-page that had activity, summarising photos,
 comments, docs, decisions, snags fixed/new, and stage moves with the app's muted
 activity-type colours. **Owner-toggleable** (Profile → Weekly Digest, stored in
 `app_settings.weekly_digest_enabled`): when on it appears in the sidebar (after
 Calendar) **immediately** for **all signed-in users** (owners and collaborators)
-— **never for guests**. The toggle is owner-only; the page is visible to any
+- **never for guests**. The toggle is owner-only; the page is visible to any
 non-guest. Progress is powered by the `stage_changes` log (written whenever a
 stage is set current).
 
@@ -252,7 +258,9 @@ toggles are persisted to `users.notif_prefs` and respected when sending;
 "Assigned to a page" is always-on (not disableable).
 
 ### Cross-cutting
-- **Rich-text editor** — bold/italic/strikethrough/lists + @mention autocomplete.
+- **Rich-text editor**: bold/italic/strikethrough/lists/**links** (🔗 button:
+  select text and paste a URL; re-click inside a link to edit it, clear to
+  remove; links open in a new tab) + @mention autocomplete.
 - **Toasts** for success/error (no browser dialogs).
 - **Mobile-responsive** (phones): off-canvas sidebar drawer, viewport-safe
   modals/menus, stacked profile fields, single-column grids. Uses `100dvh` for
@@ -305,7 +313,7 @@ src/
 | `/api/snags` | GET, POST, PATCH, DELETE | Snag list |
 | `/api/activity` | GET | Aggregated recent-activity feed (comments, photos, documents, events, pages, page assignments) |
 | `/api/search` | GET (`?q=`, `&guest=1`) | Global search across pages, milestones, decisions, snags, photos, documents, comments |
-| `/api/digest` | GET (`?start=&end=`) | Weekly digest aggregation for a Sun–Sat week |
+| `/api/digest` | GET (`?start=&end=`) | Weekly digest aggregation for a Sun-Sat week |
 | `/api/settings` | GET, PATCH (owner-only) | Global app settings (e.g. `weekly_digest_enabled`) |
 | `/api/users`, `/api/users/[id]`, `/api/users/resolve` | GET/POST, PATCH/DELETE, POST | Team; PATCH accepts `notif_prefs`; resolve maps auth → user (invite-only) |
 | `/api/guest-passcode`, `/api/auth/guest-verify` | POST | Set / verify guest passcode |
@@ -329,8 +337,16 @@ pending migrations (above) since local and prod share one Supabase project.
 
 ## 🧭 Backlog / Not Yet Built
 
-- **"On this day"** photo memories (3/6/12-month lookback) — designed, dormant
+- **"On this day"** photo memories (3/6/12-month lookback): designed, dormant
   until there are old-enough photos.
+- **Greyton Resources page** (`/resources`): a native (non-embedded), category-
+  indexed, on-page-searchable listings page two-way synced with a Google Sheet
+  (`Name | Category | Contact | Phone | Email | Website | Notes`), with an
+  add-listing form. **Code is built** (`src/lib/sheets.ts`, `/api/resources`,
+  `/resources`) but **paused** pending: creating the Sheet, a Google service
+  account (share the sheet Editor + env vars `GOOGLE_SERVICE_ACCOUNT_EMAIL`,
+  `GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY`, `RESOURCES_SHEET_ID`), then re-pointing
+  the footer link. Not wired into the app yet.
 
 ## 📄 License
 

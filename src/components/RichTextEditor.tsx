@@ -57,7 +57,58 @@ export default function RichTextEditor({
     onChange(ref.current?.innerHTML || "");
   };
 
-  // Text from the start of the editor up to the caret — works regardless of
+  // Find the <a> the caret currently sits in, if any.
+  const anchorAtCaret = (): HTMLAnchorElement | null => {
+    const sel = window.getSelection();
+    let node: Node | null = sel?.anchorNode || null;
+    while (node && node !== ref.current) {
+      if (node instanceof HTMLAnchorElement) return node;
+      node = node.parentNode;
+    }
+    return null;
+  };
+
+  const setLink = () => {
+    ref.current?.focus();
+    const sel = window.getSelection();
+    const existing = anchorAtCaret();
+    const input = window.prompt(
+      existing ? "Edit link URL (clear to remove the link)" : "Link URL",
+      existing?.getAttribute("href") || ""
+    );
+    if (input === null) return; // cancelled
+    const raw = input.trim();
+    if (!raw) {
+      if (existing) {
+        // Unwrap the whole anchor even when the selection is collapsed.
+        const range = document.createRange();
+        range.selectNodeContents(existing);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+      document.execCommand("unlink", false);
+      onChange(ref.current?.innerHTML || "");
+      return;
+    }
+    const url = /^(https?:\/\/|mailto:)/i.test(raw) ? raw : `https://${raw}`;
+    if (existing && (!sel || sel.isCollapsed)) {
+      existing.setAttribute("href", url);
+    } else if (!sel || sel.isCollapsed) {
+      // Nothing selected: insert the URL itself as a link.
+      const esc = url.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+      document.execCommand("insertHTML", false, `<a href="${esc}">${esc}</a>&nbsp;`);
+    } else {
+      document.execCommand("createLink", false, url);
+    }
+    // Saved HTML is rendered outside the app's router: open links in a new tab.
+    ref.current?.querySelectorAll("a").forEach((a) => {
+      a.setAttribute("target", "_blank");
+      a.setAttribute("rel", "noopener");
+    });
+    onChange(ref.current?.innerHTML || "");
+  };
+
+  // Text from the start of the editor up to the caret: works regardless of
   // whether the caret sits in a text node or the editable element itself
   // (the latter happens often on mobile and on the first character typed).
   const textBeforeCaret = (caret: Range) => {
@@ -105,7 +156,7 @@ export default function RichTextEditor({
     const m = before.match(/@(\w*)$/);
     if (!m) return;
     const removeLen = m[0].length; // length of "@query"
-    // Select the "@query" right before the caret and replace it — using the
+    // Select the "@query" right before the caret and replace it: using the
     // Selection API so it works across text/element node boundaries.
     for (let i = 0; i < removeLen; i++) {
       (sel as Selection & { modify: (a: string, d: string, g: string) => void }).modify(
@@ -163,6 +214,15 @@ export default function RichTextEditor({
             </button>
           );
         })}
+        <button
+          type="button"
+          title="Link"
+          className="rte-btn"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={setLink}
+        >
+          <span>🔗 Link</span>
+        </button>
       </div>
       <div
         ref={ref}

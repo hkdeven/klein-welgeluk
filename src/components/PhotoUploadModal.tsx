@@ -154,7 +154,8 @@ export default function PhotoUploadModal({
           <>
             <label>…or paste an image URL (optional)</label>
             <input
-              type="url"
+              type="text"
+              inputMode="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://…"

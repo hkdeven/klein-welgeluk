@@ -77,43 +77,77 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const file = formData.get("file") as File;
-    const page_id = formData.get("page_id") as string;
-    const caption = formData.get("caption") as string;
-    const user_id = formData.get("user_id") as string;
-    const category = formData.get("category") as string | null;
-    const displayName = (formData.get("filename") as string | null)?.trim();
+    let page_id: string;
+    let caption: string;
+    let user_id: string;
+    let category: string | null;
+    let displayName: string | undefined;
+    let filePath: string;
+    let fileSize: number;
+    let originalName: string;
 
-    if (!file || !page_id) {
-      return NextResponse.json(
-        { error: "File and page_id are required" },
-        { status: 400 }
-      );
+    if ((request.headers.get("content-type") || "").includes("application/json")) {
+      // File was uploaded straight from the browser to storage (no serverless
+      // body-size limit); this request only carries the metadata.
+      const body = await request.json();
+      page_id = body.page_id;
+      caption = body.caption || "";
+      user_id = body.user_id;
+      category = body.category || null;
+      displayName = (body.filename as string | undefined)?.trim() || undefined;
+      filePath = body.storage_path;
+      fileSize = Number(body.file_size) || 0;
+      originalName = body.original_name || body.filename || "";
+
+      if (!filePath || !page_id) {
+        return NextResponse.json(
+          { error: "storage_path and page_id are required" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Legacy path: the file travels through this route. Vercel caps request
+      // bodies at ~4.5MB, so large files must use the JSON/direct path above.
+      const formData = await request.formData();
+      const file = formData.get("file") as File;
+      page_id = formData.get("page_id") as string;
+      caption = (formData.get("caption") as string) || "";
+      user_id = formData.get("user_id") as string;
+      category = formData.get("category") as string | null;
+      displayName = (formData.get("filename") as string | null)?.trim() || undefined;
+
+      if (!file || !page_id) {
+        return NextResponse.json(
+          { error: "File and page_id are required" },
+          { status: 400 }
+        );
+      }
+
+      // Upload file to Supabase Storage (sanitize name; keys can't contain spaces/etc.)
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      filePath = `documents/${page_id}/${Date.now()}_${safeName}`;
+
+      const fileBuffer = await file.arrayBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from("documents")
+        .upload(filePath, Buffer.from(fileBuffer), {
+          contentType: file.type,
+        });
+
+      if (uploadError) throw uploadError;
+
+      fileSize = file.size;
+      originalName = file.name;
     }
-
-    // Upload file to Supabase Storage (sanitize name — keys can't contain spaces/etc.)
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const fileName = `${Date.now()}_${safeName}`;
-    const filePath = `documents/${page_id}/${fileName}`;
-
-    const fileBuffer = await file.arrayBuffer();
-    const { error: uploadError } = await supabase.storage
-      .from("documents")
-      .upload(filePath, Buffer.from(fileBuffer), {
-        contentType: file.type,
-      });
-
-    if (uploadError) throw uploadError;
 
     // Create document record in database
     const record: Record<string, unknown> = {
       page_id,
-      filename: displayName || file.name,
+      filename: displayName || originalName,
       storage_path: filePath,
-      file_size: file.size,
-      file_type: file.name.split(".").pop() || "file",
-      caption: caption || "",
+      file_size: fileSize,
+      file_type: originalName.split(".").pop() || "file",
+      caption,
       uploaded_by: user_id,
     };
     if (category) record.category = category;

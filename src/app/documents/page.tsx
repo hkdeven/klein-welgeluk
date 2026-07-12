@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { useEditMode } from "@/components/EditModeContext";
 import { useCurrentUser, useAuth } from "@/components/AuthProvider";
 import { usePages } from "@/hooks/usePages";
+import { uploadToStorage, sanitizeName } from "@/lib/upload";
 
 
 const storageUrl = (path: string) =>
@@ -52,15 +53,27 @@ export default function DocumentsPage() {
     if (!pageId) return;
     try {
       for (const { file, filename } of items) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("page_id", pageId);
-        formData.append("user_id", mockUser.id);
-        formData.append("category", category);
-        formData.append("caption", description);
-        formData.append("filename", filename);
-        const res = await fetch("/api/documents", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Upload failed");
+        // Upload straight to storage (no serverless body-size limit), then save metadata.
+        const path = `documents/${pageId}/${Date.now()}_${sanitizeName(file.name)}`;
+        await uploadToStorage("documents", path, file);
+        const res = await fetch("/api/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            page_id: pageId,
+            storage_path: path,
+            filename,
+            original_name: file.name,
+            file_size: file.size,
+            user_id: mockUser.id,
+            category,
+            caption: description,
+          }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || "Upload failed");
+        }
       }
       await loadDocuments();
       setDocModal(false);
@@ -158,7 +171,7 @@ export default function DocumentsPage() {
                     </a>
                   </b>
                   <span>
-                    Uploaded by {doc.uploader?.short_name || "—"} · {shortDate(doc.created_at)}
+                    Uploaded by {doc.uploader?.short_name || "-"} · {shortDate(doc.created_at)}
                     {doc.page?.title && (
                       <>
                         {" · in "}
@@ -167,7 +180,7 @@ export default function DocumentsPage() {
                         </a>
                       </>
                     )}
-                    {doc.caption ? ` — ${doc.caption}` : ""}
+                    {doc.caption ? `: ${doc.caption}` : ""}
                   </span>
                 </div>
                 <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>

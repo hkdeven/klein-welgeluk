@@ -63,6 +63,51 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const IMG_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+  "image/svg+xml": "svg",
+};
+
+// Fetch an external image and copy it into the photos bucket, so URL-added
+// photos keep working when the source has hotlink protection or expires.
+// Returns the storage path, or null if the source can't be fetched (in that
+// case we fall back to storing the raw URL, the old behaviour).
+async function importExternalImage(url: string, pageId: string): Promise<string | null> {
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36",
+        Accept: "image/avif,image/webp,image/png,image/jpeg,image/*;q=0.8,*/*;q=0.5",
+      },
+    });
+  } catch {
+    return null;
+  }
+  if (!res.ok) return null;
+  const type = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+  if (!type.startsWith("image/")) {
+    throw new Error(
+      "That link isn't a direct image. Right-click the picture and choose 'Copy image address', then paste that."
+    );
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (!buf.length) return null;
+  if (buf.length > 25 * 1024 * 1024) throw new Error("That image is too large (max 25MB)");
+  const path = `photos/${pageId}/${Date.now()}_from-url.${IMG_EXT[type] || "jpg"}`;
+  const { error } = await supabase!.storage
+    .from("photos")
+    .upload(path, buf, { contentType: type, upsert: false });
+  if (error) return null;
+  return path;
+}
+
 export async function POST(request: NextRequest) {
   try {
     if (!supabase) {
@@ -89,13 +134,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // URL-added photos: normalise the scheme, then try to import a copy into
+    // storage. A non-image link is a hard error; an unreachable one falls back
+    // to storing the URL as-is.
+    let url: string | null = external_url || null;
+    let path: string | null = storage_path || null;
+    if (url && !path) {
+      if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+      try {
+        const imported = await importExternalImage(url, page_id);
+        if (imported) {
+          path = imported;
+          url = null;
+        }
+      } catch (err) {
+        return NextResponse.json({ error: (err as Error).message }, { status: 422 });
+      }
+    }
+
     const { data: newPhoto, error } = await supabase
       .from("photos")
       .insert([
         {
           page_id,
-          external_url: external_url || null,
-          storage_path: storage_path || null,
+          external_url: url,
+          storage_path: path,
           caption: caption || "",
           category: category || "inspiration",
           uploaded_by,

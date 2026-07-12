@@ -198,7 +198,10 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
         uploaded_by: user.id,
       }),
     });
-    if (!res.ok) throw new Error("Could not add photo");
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || "Could not add photo");
+    }
     return res.json();
   };
 
@@ -221,15 +224,27 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
     if (!pageId) return;
     try {
       for (const { file, filename } of items) {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("page_id", pageId);
-        formData.append("user_id", user.id);
-        formData.append("category", category);
-        formData.append("caption", description);
-        formData.append("filename", filename);
-        const res = await fetch("/api/documents", { method: "POST", body: formData });
-        if (!res.ok) throw new Error("Failed to upload document");
+        // Upload straight to storage (no serverless body-size limit), then save metadata.
+        const path = `documents/${pageId}/${Date.now()}_${sanitizeName(file.name)}`;
+        await uploadToStorage("documents", path, file);
+        const res = await fetch("/api/documents", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            page_id: pageId,
+            storage_path: path,
+            filename,
+            original_name: file.name,
+            file_size: file.size,
+            user_id: user.id,
+            category,
+            caption: description,
+          }),
+        });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || "Failed to upload document");
+        }
       }
       await loadDocuments(pageId);
       setDocModal(false);
@@ -292,8 +307,8 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
               </a>
             </b>
             <span>
-              Uploaded by {doc.uploader?.short_name || "—"} · {shortDate(doc.created_at)}
-              {doc.caption ? ` — ${doc.caption}` : ""}
+              Uploaded by {doc.uploader?.short_name || "-"} · {shortDate(doc.created_at)}
+              {doc.caption ? `: ${doc.caption}` : ""}
             </span>
           </div>
           <div className="right" style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -466,9 +481,13 @@ export default function PageMedia({ pageId, user, defaultCategory }: PageMediaPr
           photo={modalPhoto}
           url={photoSrc(modalPhoto, 1400)}
           canEdit={isOwner}
+          categories={photoCats}
           onClose={() => setModalPhoto(null)}
           onCaptionSaved={(id, caption) =>
             setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)))
+          }
+          onCategorySaved={(id, category) =>
+            setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, category } : p)))
           }
           onReactionChange={loadCounts}
         />

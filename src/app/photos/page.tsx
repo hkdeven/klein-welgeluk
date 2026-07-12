@@ -132,7 +132,10 @@ export default function PhotosPage() {
         uploaded_by: user.id,
       }),
     });
-    if (!res.ok) throw new Error("Could not add photo");
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || "Could not add photo");
+    }
     return res.json();
   };
 
@@ -211,7 +214,7 @@ export default function PhotosPage() {
                   {p.caption && <div className="cap">{p.caption}</div>}
                   <div className="meta">
                     <span>
-                      {who || "—"}
+                      {who || "-"}
                       {where ? ` · ${where}` : ""}
                     </span>
                     {cc > 0 && <span>💬 {cc}</span>}
@@ -250,9 +253,13 @@ export default function PhotosPage() {
           photo={modalPhoto}
           url={photoSrc(modalPhoto, 1400)}
           canEdit={isOwner}
+          categories={photoCats}
           onClose={() => setModalPhoto(null)}
           onCaptionSaved={(id, caption) =>
             setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, caption } : p)))
+          }
+          onCategorySaved={(id, category) =>
+            setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, category } : p)))
           }
           onReactionChange={loadCounts}
         />
